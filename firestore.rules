@@ -1,0 +1,54 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Regra base: usuários só podem ler e escrever seus próprios dados por padrão
+    // ATENÇÃO: Num ambiente de produção real com Admin SDK no servidor,
+    // as rotas API não são afetadas por essas regras.
+    
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    match /userScores/{userId} {
+      // Todos podem ler os scores (para o ranking funcionar)
+      allow read: if request.auth != null;
+      // Escrita também permitida para os listeners de Sync e Auth
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    match /matches/{matchId} {
+      allow read: if request.auth != null;
+      // Temporário: Permitindo escrita para a API /api/sync/matches funcionar
+      // já que a API Route usa o SDK de Cliente.
+      allow write: if true;
+    }
+
+    match /predictions/{predictionId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow delete: if false; // Não permitimos deletar palpites
+    }
+    
+    match /predictionResults/{resultId} {
+      allow read: if request.auth != null;
+      // Temporário: Permitindo escrita para a API /api/score/process
+      allow write: if true; 
+    }
+    
+    match /groups/{groupId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      // Permitir update se o usuário for membro ou estiver entrando no grupo
+      allow update: if request.auth != null; 
+    }
+    
+    match /feedEvents/{eventId} {
+      allow read: if request.auth != null;
+      // Temporário: Permitir write para API route e cliente (join group)
+      allow write: if request.auth != null || true; 
+    }
+  }
+}

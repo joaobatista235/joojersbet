@@ -1,0 +1,14 @@
+{
+  "crons": [
+    {
+      "path": "/api/sync/matches",
+      "schedule": "*/5 * * * *",
+      "description": "Sincroniza partidas ao vivo e do dia com Firestore"
+    },
+    {
+      "path": "/api/score/process",
+      "schedule": "*/15 * * * *",
+      "description": "Processa pontuação de partidas finalizadas"
+    }
+  ]
+}
