@@ -10,7 +10,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "JoojerBets — Bolão Esportivo entre Amigos",
+  title: "JoojerBets — Bolão Esportivo",
   description:
     "Faça palpites em partidas de futebol e outros esportes, compete com amigos e suba no ranking.",
   keywords: ["bolão", "palpites", "futebol", "copa do mundo", "esportes"],
