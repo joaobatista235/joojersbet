@@ -27,7 +27,11 @@ interface UseGroupRankingResult {
 /**
  * Ouve o grupo em tempo real e recalcula o ranking dos membros.
  */
-export function useGroupRanking(groupId: string): UseGroupRankingResult {
+export function useGroupRanking(
+  groupId: string,
+  category?: string,
+  leagueId?: string | number
+): UseGroupRankingResult {
   const [groupName, setGroupName] = useState("");
   const [inviteCode, setInviteCode] = useState("");
   const [ownerId, setOwnerId] = useState("");
@@ -86,13 +90,38 @@ export function useGroupRanking(groupId: string): UseGroupRankingResult {
 
             for (const d of scoresSnap.docs) {
               const raw = d.data();
+              let pts = raw.totalPoints ?? 0;
+              let acc = raw.accuracy ?? 0;
+              let tot = raw.totalPredictions ?? 0;
+              let cor = raw.correctPredictions ?? 0;
+
+              if (category) {
+                const catData = raw[category];
+                if (catData) {
+                  const target = leagueId && leagueId !== "geral" 
+                    ? catData.leagues?.[leagueId] 
+                    : catData.geral;
+                    
+                  if (target) {
+                    pts = target.totalPoints ?? 0;
+                    acc = target.accuracy ?? 0;
+                    tot = target.totalPredictions ?? 0;
+                    cor = target.correctPredictions ?? 0;
+                  } else {
+                    pts = 0; acc = 0; tot = 0; cor = 0;
+                  }
+                } else {
+                  pts = 0; acc = 0; tot = 0; cor = 0;
+                }
+              }
+
               scoreResults.push({
                 uid: d.id,
                 position: null,
-                totalPoints: raw.totalPoints ?? 0,
-                accuracy: raw.accuracy ?? 0,
-                totalPredictions: raw.totalPredictions ?? 0,
-                correctPredictions: raw.correctPredictions ?? 0,
+                totalPoints: pts,
+                accuracy: acc,
+                totalPredictions: tot,
+                correctPredictions: cor,
                 updatedAt: tsToISO(raw.updatedAt),
                 name: raw.name,
                 initials: raw.initials,
@@ -141,7 +170,7 @@ export function useGroupRanking(groupId: string): UseGroupRankingResult {
     return () => {
       if (unsubscribe) unsubscribe();
     };
-  }, [groupId]);
+  }, [groupId, category, leagueId]);
 
   return { groupName, inviteCode, ownerId, entries, loading, error };
 }

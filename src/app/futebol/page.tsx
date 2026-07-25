@@ -12,6 +12,7 @@ import {
   ChevronDown,
   ChevronUp,
   BookOpen,
+  Check,
 } from "lucide-react";
 import { useMatches } from "@/hooks/useMatches";
 import { usePredictions } from "@/hooks/usePredictions";
@@ -253,9 +254,16 @@ function MatchRow({
         )}
       </div>
 
-      {/* Action */}
       <div style={{ flexShrink: 0 }}>
-        {isLocked ? (
+        {hasPred ? (
+          <button
+            className="btn-done"
+            style={{ padding: "6px 14px", fontSize: 12, display: "flex", alignItems: "center", gap: 4, cursor: "default", opacity: 0.8 }}
+          >
+            <Check size={12} />
+            Palpitado
+          </button>
+        ) : isLocked ? (
           <div
             style={{
               display: "flex",
@@ -266,16 +274,8 @@ function MatchRow({
             }}
           >
             <Clock size={12} />
-            {hasPred ? "Palpite feito" : "Encerrado"}
+            Encerrado
           </div>
-        ) : hasPred ? (
-          <button
-            onClick={onPredict}
-            className="btn-ghost"
-            style={{ fontSize: 12, padding: "6px 14px" }}
-          >
-            Editar
-          </button>
         ) : (
           <button
             onClick={onPredict}

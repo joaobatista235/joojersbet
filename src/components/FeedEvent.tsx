@@ -7,6 +7,7 @@ interface FeedItem {
   user: string;
   initials: string;
   avatarColor: string;
+  photoURL?: string | null;
   message: string;
   timeAgo: string;
 }
@@ -33,26 +34,43 @@ export function FeedEvent({ item, delay = 0 }: { item: FeedItem; delay?: number 
       }}
     >
       {/* Avatar */}
-      <div
-        style={{
-          width: 36,
-          height: 36,
-          minWidth: 36,
-          minHeight: 36,
-          borderRadius: "50%",
-          backgroundColor: item.avatarColor,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: 12,
-          fontWeight: 700,
-          color: "white",
-          flexShrink: 0,
-          marginTop: 1,
-        }}
-      >
-        {item.initials}
-      </div>
+      {item.photoURL ? (
+        <img
+          src={item.photoURL}
+          alt={item.user}
+          style={{
+            width: 36,
+            height: 36,
+            minWidth: 36,
+            minHeight: 36,
+            borderRadius: "50%",
+            objectFit: "cover",
+            flexShrink: 0,
+            marginTop: 1,
+          }}
+        />
+      ) : (
+        <div
+          style={{
+            width: 36,
+            height: 36,
+            minWidth: 36,
+            minHeight: 36,
+            borderRadius: "50%",
+            backgroundColor: item.avatarColor,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 12,
+            fontWeight: 700,
+            color: "white",
+            flexShrink: 0,
+            marginTop: 1,
+          }}
+        >
+          {item.initials}
+        </div>
+      )}
 
       {/* Text */}
       <div style={{ flex: 1, minWidth: 0 }}>

@@ -13,6 +13,7 @@ export interface UserScore {
   correctPredictions: number;
   pendingPredictions: number;
   updatedAt: string | null;
+  [key: string]: any;
 }
 
 const DEFAULT_SCORE: UserScore = {

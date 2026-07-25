@@ -6,12 +6,11 @@ import { X, Trophy, Check, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   createPrediction,
-  updatePrediction,
   type Prediction,
 } from "@/lib/predictions";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import type { Match } from "@/lib/api-football/types";
-
-/* ─── Props ───────────────────────────────────────────────── */
 
 interface PredictionModalProps {
   match: Match | null;
@@ -19,8 +18,6 @@ interface PredictionModalProps {
   onClose: () => void;
   onSaved?: (prediction: Prediction) => void;
 }
-
-/* ─── Número stepper ──────────────────────────────────────── */
 
 function GoalInput({
   value,
@@ -118,8 +115,6 @@ function GoalInput({
   );
 }
 
-/* ─── Modal ───────────────────────────────────────────────── */
-
 export function PredictionModal({
   match,
   existingPrediction,
@@ -133,7 +128,6 @@ export function PredictionModal({
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Pré-preencher com palpite existente
   useEffect(() => {
     if (existingPrediction) {
       setHomeGoals(existingPrediction.homeGoals);
@@ -146,7 +140,6 @@ export function PredictionModal({
     setError(null);
   }, [existingPrediction, match]);
 
-  // Fechar com Escape
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -156,10 +149,8 @@ export function PredictionModal({
   }, [onClose]);
 
   const isLocked =
-    existingPrediction?.locked ||
+    Boolean(existingPrediction) ||
     (match ? new Date(match.startTime) <= new Date() : false);
-
-  const isEditing = Boolean(existingPrediction && !existingPrediction.locked);
 
   const handleSave = useCallback(async () => {
     if (!user || !match || isLocked || saving) return;
@@ -168,26 +159,27 @@ export function PredictionModal({
     setError(null);
 
     try {
-      let result: Prediction;
-      if (existingPrediction) {
-        await updatePrediction(existingPrediction.id, homeGoals, awayGoals);
-        result = {
-          ...existingPrediction,
-          homeGoals,
-          awayGoals,
-          updatedAt: new Date().toISOString(),
-        };
-      } else {
-        result = await createPrediction(user.uid, {
-          matchId: match.id,
-          homeGoals,
-          awayGoals,
+      const result = await createPrediction(user.uid, {
+        matchId: match.id,
+        homeGoals,
+        awayGoals,
+      });
+
+      if (db) {
+        await addDoc(collection(db, "feedEvents"), {
+          userId: user.uid,
+          user: user.name || "Jogador",
+          initials: user.initials || "?",
+          avatarColor: "#f97316",
+          photoURL: user.photoURL || null,
+          message: `fez um palpite no jogo ${match.homeTeam} × ${match.awayTeam}`,
+          createdAt: serverTimestamp(),
         });
       }
+
       setSaved(true);
       onSaved?.(result);
 
-      // Fechar após breve feedback visual
       setTimeout(() => onClose(), 900);
     } catch (err) {
       setError("Erro ao salvar palpite. Tente novamente.");
@@ -195,7 +187,7 @@ export function PredictionModal({
     } finally {
       setSaving(false);
     }
-  }, [user, match, isLocked, saving, existingPrediction, homeGoals, awayGoals, onSaved, onClose]);
+  }, [user, match, isLocked, saving, homeGoals, awayGoals, onSaved, onClose]);
 
   if (!match) return null;
 
@@ -273,7 +265,7 @@ export function PredictionModal({
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>
-                {isEditing ? "Editar palpite" : isLocked ? "Palpite encerrado" : "Fazer palpite"}
+                {isLocked ? "Palpite encerrado" : "Fazer palpite"}
               </div>
               <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
                 {match.competition} · {match.round} · {matchDate} às {matchTime}
@@ -386,7 +378,7 @@ export function PredictionModal({
                   textAlign: "center",
                 }}
               >
-                ⛔ Palpites encerrados — o jogo já começou
+                ⛔ Palpites encerrados
               </div>
             )}
 
@@ -444,8 +436,6 @@ export function PredictionModal({
                     <Check size={16} />
                     Salvo!
                   </>
-                ) : isEditing ? (
-                  "Atualizar palpite"
                 ) : (
                   "Confirmar palpite"
                 )}

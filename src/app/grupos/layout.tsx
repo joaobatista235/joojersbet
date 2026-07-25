@@ -4,7 +4,7 @@ import { DashboardShell } from "@/components/DashboardShell";
 import { AuthGuard } from "@/components/AuthGuard";
 
 export const metadata = {
-  title: "Grupos — JoojerBets",
+  title: "Grupos — JoojersBet",
   description: "Compete com seus amigos em grupos privados.",
 };
 

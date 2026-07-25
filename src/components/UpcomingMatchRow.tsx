@@ -124,14 +124,13 @@ export function UpcomingMatchRow({
             Fechado
           </button>
         ) : hasPrediction ? (
-          /* Tem palpite e ainda pode editar */
+          /* Tem palpite e não pode editar mais */
           <button
-            className="btn-ghost"
-            style={{ padding: "6px 14px", fontSize: 12, display: "flex", alignItems: "center", gap: 4 }}
-            onClick={match.onPredict}
+            className="btn-done"
+            style={{ padding: "6px 14px", fontSize: 12, display: "flex", alignItems: "center", gap: 4, cursor: "default", opacity: 0.8 }}
           >
-            Editar
-            <ChevronRight size={12} />
+            <Check size={12} />
+            Palpitado
           </button>
         ) : (
           /* Sem palpite */

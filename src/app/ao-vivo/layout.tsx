@@ -4,7 +4,7 @@ import { DashboardShell } from "@/components/DashboardShell";
 import { AuthGuard } from "@/components/AuthGuard";
 
 export const metadata = {
-  title: "Central Ao Vivo — JoojerBets",
+  title: "Central Ao Vivo — JoojersBet",
   description: "Acompanhe as partidas em tempo real.",
 };
 

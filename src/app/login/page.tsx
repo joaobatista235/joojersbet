@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Trophy, LogIn, Loader2, AlertCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import Link from "next/link";
 
 export default function LoginPage() {
   const { user, loading, signInWithGoogle } = useAuth();
@@ -233,13 +234,13 @@ export default function LoginPage() {
           }}
         >
           Ao entrar, você concorda com nossos{" "}
-          <span style={{ color: "var(--orange-500)", cursor: "pointer" }}>
+          <Link href="/termos" style={{ color: "var(--orange-500)", cursor: "pointer", textDecoration: "none" }}>
             Termos de Uso
-          </span>{" "}
+          </Link>{" "}
           e{" "}
-          <span style={{ color: "var(--orange-500)", cursor: "pointer" }}>
+          <Link href="/privacidade" style={{ color: "var(--orange-500)", cursor: "pointer", textDecoration: "none" }}>
             Política de Privacidade
-          </span>
+          </Link>
           .
         </p>
       </motion.div>

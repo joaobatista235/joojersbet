@@ -1,9 +1,3 @@
-// Busca partidas ao vivo + do dia na API-Football e sincroniza no Firestore.
-// Protegido por header x-sync-secret para uso em cron Vercel.
-// Em dev, pode ser chamado manualmente:
-//   curl -X POST http://localhost:3000/api/sync/matches \
-//        -H "x-sync-secret: dev"
-
 import type { NextRequest } from "next/server";
 import { db } from "@/lib/firebase";
 import { doc, writeBatch } from "firebase/firestore";
@@ -12,7 +6,6 @@ import type { Match } from "@/lib/api-football/types";
 
 export const runtime = "nodejs";
 
-// Em produção, define SYNC_SECRET no env. Em dev, qualquer valor é aceito.
 const EXPECTED_SECRET = process.env.SYNC_SECRET ?? "dev";
 
 export async function POST(request: NextRequest) {

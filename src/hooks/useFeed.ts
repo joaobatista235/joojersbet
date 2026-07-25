@@ -10,6 +10,7 @@ export interface FeedEventData {
   user: string; // nome do usuário
   initials: string;
   avatarColor: string;
+  photoURL?: string | null;
   message: string;
   createdAt: string; // ISO string
 }
@@ -42,6 +43,7 @@ export function useFeed(maxEvents = 10) {
             user: data.user || "Usuário",
             initials: data.initials || "?",
             avatarColor: data.avatarColor || "#f97316",
+            photoURL: data.photoURL || null,
             message: data.message,
             createdAt: tsToISO(data.createdAt),
           } as FeedEventData;

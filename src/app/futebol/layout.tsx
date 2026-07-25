@@ -4,7 +4,7 @@ import { DashboardShell } from "@/components/DashboardShell";
 import { AuthGuard } from "@/components/AuthGuard";
 
 export const metadata = {
-  title: "Futebol — JoojerBets",
+  title: "Futebol — JoojersBet",
   description: "Faça seus palpites nas partidas de futebol.",
 };
 

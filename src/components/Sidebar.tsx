@@ -31,10 +31,10 @@ const navItems = [
   { href: "/rankings", label: "Rankings", icon: BarChart2 },
   { href: "/grupos", label: "Grupos", icon: Users },
   { href: "/perfil", label: "Perfil", icon: User },
+  { href: "/configuracoes", label: "Configurações", icon: Settings },
 ];
 
 const comingSoon = [
-  { label: "Configurações", icon: Settings },
   { label: "Counter Strike 2", icon: Gamepad2 },
 ];
 

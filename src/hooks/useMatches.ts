@@ -45,7 +45,12 @@ export function useMatches(
     try {
       let q;
       if (status === "FINISHED") {
-        q = query(collection(db, "matches"), where("status", "==", status));
+        q = query(
+          collection(db, "matches"),
+          where("status", "==", status),
+          orderBy("startTime", "desc"),
+          limit(maxResults * 2)
+        );
       } else {
         q = query(
           collection(db, "matches"),

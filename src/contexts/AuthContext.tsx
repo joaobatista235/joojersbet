@@ -69,6 +69,12 @@ async function syncUserToFirestore(fbUser: User): Promise<UserProfile> {
   } else {
     const data = snap.data() as Omit<UserProfile, "uid">;
     profile = { uid: fbUser.uid, ...data };
+    
+    // Always keep photoURL updated
+    if (fbUser.photoURL && fbUser.photoURL !== profile.photoURL) {
+      profile.photoURL = fbUser.photoURL;
+      await setDoc(ref, { photoURL: fbUser.photoURL }, { merge: true });
+    }
   }
 
   // Desnormalizar nome/foto em userScores para exibição nos rankings de grupo
@@ -78,7 +84,7 @@ async function syncUserToFirestore(fbUser: User): Promise<UserProfile> {
     {
       name: profile.name,
       initials: profile.initials,
-      photoURL: profile.photoURL,
+      photoURL: profile.photoURL || null,
       city: profile.city ?? null,
     },
     { merge: true }

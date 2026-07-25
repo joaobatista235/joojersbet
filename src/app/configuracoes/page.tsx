@@ -17,12 +17,9 @@ export default function ConfiguracoesPage() {
 
       <div style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 600 }}>
         {[
-          { icon: <Bell size={18} />, title: "Notificações", desc: "Gerencie alertas de jogos e resultados (em breve)" },
-          { icon: <Moon size={18} />, title: "Aparência", desc: "Tema escuro já está ativado por padrão" },
-          { icon: <Shield size={18} />, title: "Privacidade e Segurança", desc: "Suas informações estão protegidas pelo Google Auth" },
-          { icon: <Settings2 size={18} />, title: "Preferências do Bolão", desc: "Opções avançadas de palpites (em breve)" },
+          { icon: <Shield size={18} />, title: "Excluir Conta", desc: "Apagar permanentemente seus dados do sistema", action: true },
         ].map((item, i) => (
-          <motion.div
+          <motion.button
             key={i}
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -34,22 +31,31 @@ export default function ConfiguracoesPage() {
               alignItems: "center",
               gap: 16,
               cursor: "pointer",
-              transition: "transform 0.1s ease"
+              transition: "all 0.15s ease",
+              border: "1px solid var(--border-default)",
+              backgroundColor: "transparent",
+              textAlign: "left",
+              width: "100%"
             }}
-            whileHover={{ scale: 1.01, borderColor: "var(--border-default)" }}
+            whileHover={{ backgroundColor: "rgba(239,68,68,0.05)", borderColor: "rgba(239,68,68,0.3)" }}
+            onClick={() => {
+              if (confirm("Tem certeza que deseja excluir sua conta? Esta ação não pode ser desfeita e todo o seu progresso será perdido.")) {
+                alert("Para excluir sua conta, entre em contato com o administrador do sistema.");
+              }
+            }}
           >
-            <div style={{ color: "var(--orange-400)", backgroundColor: "var(--bg-elevated)", padding: 12, borderRadius: 10 }}>
+            <div style={{ color: "#ef4444", backgroundColor: "rgba(239,68,68,0.1)", padding: 12, borderRadius: 10 }}>
               {item.icon}
             </div>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)", marginBottom: 4 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: "#ef4444", marginBottom: 4 }}>
                 {item.title}
               </div>
               <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
                 {item.desc}
               </div>
             </div>
-          </motion.div>
+          </motion.button>
         ))}
       </div>
     </div>

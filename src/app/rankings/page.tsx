@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Target, Trophy, Medal, Award, TrendingUp } from "lucide-react";
 import { useRanking, type RankingEntry } from "@/hooks/useRanking";
@@ -471,7 +472,11 @@ function SummaryCard({
 
 export default function RankingsPage() {
   const { user } = useAuth();
-  const { entries, loading } = useRanking(50);
+  
+  const [category, setCategory] = useState<string>("futebol");
+  const [leagueId, setLeagueId] = useState<string>("geral");
+  
+  const { entries, loading } = useRanking(50, category, leagueId);
 
   const top3 = entries.slice(0, 3);
   const rest = entries.slice(3);
@@ -509,6 +514,71 @@ export default function RankingsPage() {
           Ranking global atualizado em tempo real
         </p>
       </motion.div>
+
+      {/* ── Tabs ── */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+        <button
+          onClick={() => {
+            setCategory("futebol");
+            setLeagueId("geral");
+          }}
+          style={{
+            padding: "8px 16px",
+            borderRadius: 8,
+            backgroundColor: category === "futebol" ? "var(--orange-500)" : "var(--bg-elevated)",
+            color: category === "futebol" ? "white" : "var(--text-primary)",
+            fontWeight: 600,
+            border: "none",
+            cursor: "pointer",
+          }}
+        >
+          Futebol
+        </button>
+        <button
+          disabled
+          style={{
+            padding: "8px 16px",
+            borderRadius: 8,
+            backgroundColor: "var(--bg-elevated)",
+            color: "var(--text-muted)",
+            fontWeight: 600,
+            border: "none",
+            cursor: "not-allowed",
+            opacity: 0.5
+          }}
+        >
+          CS2 (Em breve)
+        </button>
+      </div>
+
+      {category === "futebol" && (
+        <div style={{ display: "flex", gap: 8, marginBottom: 24, overflowX: "auto", paddingBottom: 8 }}>
+          {[
+            { id: "geral", label: "Geral" },
+            { id: "39", label: "Premier League" },
+            { id: "71", label: "Brasileirão" },
+            { id: "135", label: "Serie A" },
+            { id: "140", label: "La Liga" }
+          ].map(league => (
+            <button
+              key={league.id}
+              onClick={() => setLeagueId(league.id)}
+              style={{
+                padding: "6px 12px",
+                borderRadius: 6,
+                fontSize: 13,
+                backgroundColor: leagueId === league.id ? "var(--orange-glow)" : "transparent",
+                color: leagueId === league.id ? "var(--orange-500)" : "var(--text-secondary)",
+                border: leagueId === league.id ? "1px solid var(--orange-500)" : "1px solid var(--border-default)",
+                cursor: "pointer",
+                whiteSpace: "nowrap"
+              }}
+            >
+              {league.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* ── Stat cards do usuário ── */}
       {myEntry && (

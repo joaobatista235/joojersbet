@@ -36,7 +36,11 @@ interface UseRankingResult {
  * Ouve `userScores` em tempo real, ordenado por pontos (desc).
  * @param maxEntries Máximo de entradas (default 50)
  */
-export function useRanking(maxEntries = 50): UseRankingResult {
+export function useRanking(
+  maxEntries = 50,
+  category?: string,
+  leagueId?: string | number
+): UseRankingResult {
   const [entries, setEntries] = useState<RankingEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,9 +53,18 @@ export function useRanking(maxEntries = 50): UseRankingResult {
 
     setLoading(true);
 
+    let orderByField = "totalPoints";
+    if (category) {
+      if (leagueId && leagueId !== "geral") {
+        orderByField = `${category}.leagues.${leagueId}.totalPoints`;
+      } else {
+        orderByField = `${category}.geral.totalPoints`;
+      }
+    }
+
     const q = query(
       collection(db, "userScores"),
-      orderBy("totalPoints", "desc"),
+      orderBy(orderByField, "desc"),
       limit(maxEntries)
     );
 
@@ -62,13 +75,39 @@ export function useRanking(maxEntries = 50): UseRankingResult {
       (snap) => {
         const data = snap.docs.map((d, idx) => {
           const raw = d.data();
+          
+          let pts = raw.totalPoints ?? 0;
+          let acc = raw.accuracy ?? 0;
+          let tot = raw.totalPredictions ?? 0;
+          let cor = raw.correctPredictions ?? 0;
+
+          if (category) {
+            const catData = raw[category];
+            if (catData) {
+              const target = leagueId && leagueId !== "geral" 
+                ? catData.leagues?.[leagueId] 
+                : catData.geral;
+                
+              if (target) {
+                pts = target.totalPoints ?? 0;
+                acc = target.accuracy ?? 0;
+                tot = target.totalPredictions ?? 0;
+                cor = target.correctPredictions ?? 0;
+              } else {
+                pts = 0; acc = 0; tot = 0; cor = 0;
+              }
+            } else {
+              pts = 0; acc = 0; tot = 0; cor = 0;
+            }
+          }
+
           return {
             uid: d.id,
-            position: raw.position ?? idx + 1,
-            totalPoints: raw.totalPoints ?? 0,
-            accuracy: raw.accuracy ?? 0,
-            totalPredictions: raw.totalPredictions ?? 0,
-            correctPredictions: raw.correctPredictions ?? 0,
+            position: idx + 1,
+            totalPoints: pts,
+            accuracy: acc,
+            totalPredictions: tot,
+            correctPredictions: cor,
             updatedAt: raw.updatedAt ?? null,
             name: raw.name ?? undefined,
             initials: raw.initials ?? undefined,
@@ -89,7 +128,7 @@ export function useRanking(maxEntries = 50): UseRankingResult {
     return () => {
       if (unsubscribe) unsubscribe();
     };
-  }, [maxEntries]);
+  }, [maxEntries, category, leagueId]);
 
   return { entries, loading, error };
 }

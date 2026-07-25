@@ -4,7 +4,7 @@ import { DashboardShell } from "@/components/DashboardShell";
 import { AuthGuard } from "@/components/AuthGuard";
 
 export const metadata = {
-  title: "Rankings — JoojerBets",
+  title: "Rankings — JoojersBet",
   description: "Ranking global de pontuação do bolão.",
 };
 

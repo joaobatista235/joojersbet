@@ -20,6 +20,9 @@ export default function PerfilPage() {
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [selectedMatchForAll, setSelectedMatchForAll] = useState<Match | null>(null);
 
+  const [category, setCategory] = useState<string>("futebol");
+  const [leagueId, setLeagueId] = useState<string>("geral");
+
   const { matches: upcoming } = useMatches("UPCOMING", 100);
   const { matches: live } = useMatches("LIVE", 50);
   const { byMatch } = usePredictions();
@@ -69,20 +72,112 @@ export default function PerfilPage() {
         </motion.div>
 
         {/* Estatísticas */}
-        <div className="lg:col-span-2" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
-          {[
-            { icon: <Trophy size={20} />, label: "Pontos Totais", value: score.totalPoints },
-            { icon: <Target size={20} />, label: "Taxa de Acerto", value: `${score.accuracy}%` },
-            { icon: <User size={20} />, label: "Palpites Certos", value: score.correctPredictions },
-          ].map((stat, i) => (
-            <motion.div key={i} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} className="card" style={{ padding: 24 }}>
-              <div style={{ color: "var(--orange-400)", marginBottom: 12 }}>{stat.icon}</div>
-              <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 4 }}>{stat.label}</div>
-              <div style={{ fontSize: 28, fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-1px" }}>
-                {stat.value}
-              </div>
-            </motion.div>
-          ))}
+        <div className="lg:col-span-2" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* ── Tabs ── */}
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              onClick={() => {
+                setCategory("futebol");
+                setLeagueId("geral");
+              }}
+              style={{
+                padding: "8px 16px",
+                borderRadius: 8,
+                backgroundColor: category === "futebol" ? "var(--orange-500)" : "var(--bg-elevated)",
+                color: category === "futebol" ? "white" : "var(--text-primary)",
+                fontWeight: 600,
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              Futebol
+            </button>
+            <button
+              disabled
+              style={{
+                padding: "8px 16px",
+                borderRadius: 8,
+                backgroundColor: "var(--bg-elevated)",
+                color: "var(--text-muted)",
+                fontWeight: 600,
+                border: "none",
+                cursor: "not-allowed",
+                opacity: 0.5
+              }}
+            >
+              CS2 (Em breve)
+            </button>
+          </div>
+
+          {category === "futebol" && (
+            <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 8 }}>
+              {[
+                { id: "geral", label: "Geral" },
+                { id: "39", label: "Premier League" },
+                { id: "71", label: "Brasileirão" },
+                { id: "135", label: "Serie A" },
+                { id: "140", label: "La Liga" }
+              ].map(league => (
+                <button
+                  key={league.id}
+                  onClick={() => setLeagueId(league.id)}
+                  style={{
+                    padding: "6px 12px",
+                    borderRadius: 6,
+                    fontSize: 13,
+                    backgroundColor: leagueId === league.id ? "var(--orange-glow)" : "transparent",
+                    color: leagueId === league.id ? "var(--orange-500)" : "var(--text-secondary)",
+                    border: leagueId === league.id ? "1px solid var(--orange-500)" : "1px solid var(--border-default)",
+                    cursor: "pointer",
+                    whiteSpace: "nowrap"
+                  }}
+                >
+                  {league.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
+            {(() => {
+              let pts = score.totalPoints ?? 0;
+              let acc = score.accuracy ?? 0;
+              let cor = score.correctPredictions ?? 0;
+
+              if (category) {
+                const catData = score[category];
+                if (catData) {
+                  const target = leagueId && leagueId !== "geral" 
+                    ? catData.leagues?.[leagueId] 
+                    : catData.geral;
+                    
+                  if (target) {
+                    pts = target.totalPoints ?? 0;
+                    acc = target.accuracy ?? 0;
+                    cor = target.correctPredictions ?? 0;
+                  } else {
+                    pts = 0; acc = 0; cor = 0;
+                  }
+                } else {
+                  pts = 0; acc = 0; cor = 0;
+                }
+              }
+
+              return [
+                { icon: <Trophy size={20} />, label: "Pontos Totais", value: pts },
+                { icon: <Target size={20} />, label: "Taxa de Acerto", value: `${acc}%` },
+                { icon: <User size={20} />, label: "Palpites Certos", value: cor },
+              ].map((stat, i) => (
+                <motion.div key={i} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} className="card" style={{ padding: 24 }}>
+                  <div style={{ color: "var(--orange-400)", marginBottom: 12 }}>{stat.icon}</div>
+                  <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 4 }}>{stat.label}</div>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-1px" }}>
+                    {stat.value}
+                  </div>
+                </motion.div>
+              ));
+            })()}
+          </div>
         </div>
       </div>
 

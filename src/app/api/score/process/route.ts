@@ -37,6 +37,7 @@ interface RawMatch {
   status: string;
   homeTeam: string;
   awayTeam: string;
+  leagueId?: number;
   scoredAt?: unknown;
 }
 
@@ -135,6 +136,8 @@ export async function POST(request: NextRequest) {
           predictionId: pred.id,
           userId: pred.userId,
           matchId: match.id,
+          category: "futebol",
+          leagueId: match.leagueId ?? null,
           homeScore: match.homeScore,
           awayScore: match.awayScore,
           homeGoals: pred.homeGoals,
@@ -210,12 +213,40 @@ export async function POST(request: NextRequest) {
       let totalPoints = 0;
       let totalPredictions = 0;
       let correctPredictions = 0;
+      const categories: any = {};
 
       for (const r of allResultsSnap.docs) {
         const d = r.data();
-        totalPoints += d.pointsEarned ?? 0;
+        const pts = d.pointsEarned ?? 0;
+        const isCorrect = d.correctWinner ? 1 : 0;
+        
+        totalPoints += pts;
         totalPredictions += 1;
         if (d.correctWinner) correctPredictions += 1;
+
+        const cat = d.category || "futebol";
+        const league = d.leagueId || "others";
+
+        if (!categories[cat]) categories[cat] = { geral: { totalPoints: 0, totalPredictions: 0, correctPredictions: 0 }, leagues: {} };
+        if (!categories[cat].leagues[league]) categories[cat].leagues[league] = { totalPoints: 0, totalPredictions: 0, correctPredictions: 0 };
+
+        categories[cat].geral.totalPoints += pts;
+        categories[cat].geral.totalPredictions += 1;
+        categories[cat].geral.correctPredictions += isCorrect;
+        
+        categories[cat].leagues[league].totalPoints += pts;
+        categories[cat].leagues[league].totalPredictions += 1;
+        categories[cat].leagues[league].correctPredictions += isCorrect;
+      }
+
+      // Calcula accuracy por categoria/liga
+      for (const cat in categories) {
+        categories[cat].geral.accuracy = categories[cat].geral.totalPredictions > 0
+          ? Math.round((categories[cat].geral.correctPredictions / categories[cat].geral.totalPredictions) * 100) : 0;
+        for (const l in categories[cat].leagues) {
+          categories[cat].leagues[l].accuracy = categories[cat].leagues[l].totalPredictions > 0
+            ? Math.round((categories[cat].leagues[l].correctPredictions / categories[cat].leagues[l].totalPredictions) * 100) : 0;
+        }
       }
 
       const accuracy =
@@ -231,6 +262,7 @@ export async function POST(request: NextRequest) {
           totalPredictions,
           correctPredictions,
           accuracy,
+          ...categories,
           position: null, // será recalculado em passo separado
           pendingPredictions: 0,
           updatedAt: new Date().toISOString(),
