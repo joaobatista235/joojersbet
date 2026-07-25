@@ -78,8 +78,6 @@ export function AllPredictionsModal({ match, onClose }: AllPredictionsModalProps
     loadPredictions();
   }, [match.id, user?.uid]);
 
-  const isLocked = new Date(match.startTime) <= new Date() || match.status !== "UPCOMING";
-
   return (
     <>
       <motion.div
@@ -153,15 +151,6 @@ export function AllPredictionsModal({ match, onClose }: AllPredictionsModalProps
               <X size={16} />
             </button>
           </div>
-
-          {!isLocked && (
-            <div style={{ padding: "12px 16px", backgroundColor: "rgba(249, 115, 22, 0.1)", borderRadius: 12, display: "flex", gap: 10, alignItems: "center", marginBottom: 20, color: "var(--orange-400)", border: "1px solid rgba(249, 115, 22, 0.2)" }}>
-              <AlertCircle size={18} />
-              <div style={{ fontSize: 12, fontWeight: 500, lineHeight: 1.4 }}>
-                O jogo ainda não começou. Outros jogadores podem alterar seus palpites.
-              </div>
-            </div>
-          )}
 
           {/* List */}
           <div style={{ overflowY: "auto", flex: 1, paddingRight: 8 }}>
