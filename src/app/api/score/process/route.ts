@@ -1,29 +1,6 @@
-// ─── POST /api/score/process ──────────────────────────────────────────────────
-// Processa partidas FINISHED que ainda não tiveram pontuação calculada.
-// Para cada predição da partida, calcula pontos e grava em:
-//   predictionResults/{matchId}_{userId}
-// Depois recalcula e atualiza userScores/{uid} para cada usuário afetado.
-//
-// Chamado pelo cron Vercel a cada 15 min e manualmente em dev:
-//   curl -X POST http://localhost:3000/api/score/process \
-//        -H "x-sync-secret: dev"
-
 import type { NextRequest } from "next/server";
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-  doc,
-  setDoc,
-  updateDoc,
-  writeBatch,
-  getDoc,
-  serverTimestamp,
-  orderBy,
-  limit,
-} from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { FieldValue } from "firebase-admin/firestore";
+import { adminDb } from "@/lib/firebase-admin";
 import { calculateScore } from "@/lib/scoring";
 
 export const runtime = "nodejs";
@@ -61,7 +38,7 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!db) {
+  if (!adminDb) {
     return Response.json(
       { error: "Firestore não configurado" },
       { status: 500 }
@@ -69,22 +46,12 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // 1. Buscar partidas FINISHED ainda não processadas
-    const matchesQ = query(
-      collection(db, "matches"),
-      where("status", "==", "FINISHED"),
-      where("scoredAt", "==", null),
-      limit(50)
-    );
+    const finishedSnap = await adminDb
+      .collection("matches")
+      .where("status", "==", "FINISHED")
+      .limit(100)
+      .get();
 
-    // Firestore não permite where("scoredAt", "==", null) diretamente com outros filtros
-    // em todos os planos — usamos getDocs e filtramos em memória como fallback seguro
-    const allFinishedQ = query(
-      collection(db, "matches"),
-      where("status", "==", "FINISHED"),
-      limit(100)
-    );
-    const finishedSnap = await getDocs(allFinishedQ);
     const unprocessed = finishedSnap.docs
       .filter((d) => !d.data().scoredAt)
       .map((d) => ({ id: d.id, ...d.data() } as RawMatch));
@@ -93,23 +60,20 @@ export async function POST(request: NextRequest) {
       return Response.json({ ok: true, processed: 0, message: "Nada a processar" });
     }
 
-    // 2. Para cada partida, buscar predições e calcular pontos
     let totalProcessed = 0;
     const affectedUsers = new Map<string, UserAccumulator>();
 
     for (const match of unprocessed) {
       if (match.homeScore === null || match.awayScore === null) continue;
 
-      // Buscar todas as predições para essa partida
-      const predsQ = query(
-        collection(db, "predictions"),
-        where("matchId", "==", match.id)
-      );
-      const predsSnap = await getDocs(predsQ);
+      const predsSnap = await adminDb
+        .collection("predictions")
+        .where("matchId", "==", match.id)
+        .get();
+
       if (predsSnap.empty) {
-        // Marcar como processada mesmo sem predições
-        await updateDoc(doc(db, "matches", match.id), {
-          scoredAt: serverTimestamp(),
+        await adminDb.collection("matches").doc(match.id).update({
+          scoredAt: FieldValue.serverTimestamp(),
         });
         continue;
       }
@@ -118,8 +82,7 @@ export async function POST(request: NextRequest) {
         (d) => ({ id: d.id, ...d.data() } as RawPrediction)
       );
 
-      // Batch para predictionResults
-      const batch = writeBatch(db);
+      const batch = adminDb.batch();
 
       for (const pred of preds) {
         const scoring = calculateScore({
@@ -129,9 +92,8 @@ export async function POST(request: NextRequest) {
           realAway: match.awayScore,
         });
 
-        // Gravar resultado (upsert)
         const resultId = `${match.id}_${pred.userId}`;
-        const resultRef = doc(db, "predictionResults", resultId);
+        const resultRef = adminDb.collection("predictionResults").doc(resultId);
         batch.set(resultRef, {
           predictionId: pred.id,
           userId: pred.userId,
@@ -146,15 +108,13 @@ export async function POST(request: NextRequest) {
           correctGoalDiff: scoring.correctGoalDiff,
           correctWinner: scoring.correctWinner,
           pointsEarned: scoring.pointsEarned,
-          processedAt: serverTimestamp(),
+          processedAt: FieldValue.serverTimestamp(),
         });
 
-        // ─── Lógica do Feed Social ───
         if (scoring.pointsEarned > 0) {
-          // Precisamos do perfil do usuário para o Feed
-          const userSnap = await getDoc(doc(db, "users", pred.userId));
-          if (userSnap.exists()) {
-            const userData = userSnap.data();
+          const userSnap = await adminDb.collection("users").doc(pred.userId).get();
+          if (userSnap.exists) {
+            const userData = userSnap.data()!;
             let message = "";
             if (scoring.exactScore) {
               message = `acertou o placar exato de ${match.homeTeam} × ${match.awayTeam} — ${match.homeScore}×${match.awayScore}`;
@@ -165,22 +125,20 @@ export async function POST(request: NextRequest) {
             }
 
             const feedId = `${match.id}_${pred.userId}_score`;
-            batch.set(doc(db, "feedEvents", feedId), {
+            batch.set(adminDb.collection("feedEvents").doc(feedId), {
               userId: pred.userId,
               user: userData.name || "Jogador",
               initials: userData.initials || "?",
               avatarColor: userData.avatarColor || "#f97316",
               message,
-              createdAt: serverTimestamp(),
+              createdAt: FieldValue.serverTimestamp(),
             });
           }
         }
 
-        // Bloquear predição
-        const predRef = doc(db, "predictions", pred.id);
+        const predRef = adminDb.collection("predictions").doc(pred.id);
         batch.update(predRef, { locked: true });
 
-        // Acumular por usuário
         const acc = affectedUsers.get(pred.userId) ?? {
           totalPoints: 0,
           totalPredictions: 0,
@@ -192,23 +150,19 @@ export async function POST(request: NextRequest) {
         affectedUsers.set(pred.userId, acc);
       }
 
-      // Marcar partida como processada
-      batch.update(doc(db, "matches", match.id), {
-        scoredAt: serverTimestamp(),
+      batch.update(adminDb.collection("matches").doc(match.id), {
+        scoredAt: FieldValue.serverTimestamp(),
       });
 
       await batch.commit();
       totalProcessed++;
     }
 
-    // 3. Recalcular userScores para usuários afetados
-    // Lê TODOS os resultados do usuário e soma (garante idempotência)
     for (const [uid, _acc] of affectedUsers) {
-      const allResultsQ = query(
-        collection(db, "predictionResults"),
-        where("userId", "==", uid)
-      );
-      const allResultsSnap = await getDocs(allResultsQ);
+      const allResultsSnap = await adminDb
+        .collection("predictionResults")
+        .where("userId", "==", uid)
+        .get();
 
       let totalPoints = 0;
       let totalPredictions = 0;
@@ -219,7 +173,7 @@ export async function POST(request: NextRequest) {
         const d = r.data();
         const pts = d.pointsEarned ?? 0;
         const isCorrect = d.correctWinner ? 1 : 0;
-        
+
         totalPoints += pts;
         totalPredictions += 1;
         if (d.correctWinner) correctPredictions += 1;
@@ -233,13 +187,12 @@ export async function POST(request: NextRequest) {
         categories[cat].geral.totalPoints += pts;
         categories[cat].geral.totalPredictions += 1;
         categories[cat].geral.correctPredictions += isCorrect;
-        
+
         categories[cat].leagues[league].totalPoints += pts;
         categories[cat].leagues[league].totalPredictions += 1;
         categories[cat].leagues[league].correctPredictions += isCorrect;
       }
 
-      // Calcula accuracy por categoria/liga
       for (const cat in categories) {
         categories[cat].geral.accuracy = categories[cat].geral.totalPredictions > 0
           ? Math.round((categories[cat].geral.correctPredictions / categories[cat].geral.totalPredictions) * 100) : 0;
@@ -254,16 +207,15 @@ export async function POST(request: NextRequest) {
           ? Math.round((correctPredictions / totalPredictions) * 100)
           : 0;
 
-      const scoreRef = doc(db, "userScores", uid);
-      await setDoc(
-        scoreRef,
+      const scoreRef = adminDb.collection("userScores").doc(uid);
+      await scoreRef.set(
         {
           totalPoints,
           totalPredictions,
           correctPredictions,
           accuracy,
           ...categories,
-          position: null, // será recalculado em passo separado
+          position: null,
           pendingPredictions: 0,
           updatedAt: new Date().toISOString(),
         },
@@ -271,15 +223,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 4. Recalcular posições (rank) para todos os usuários com score
-    const scoresQ = query(
-      collection(db, "userScores"),
-      orderBy("totalPoints", "desc"),
-      limit(500)
-    );
-    const scoresSnap = await getDocs(scoresQ);
+    const scoresSnap = await adminDb
+      .collection("userScores")
+      .orderBy("totalPoints", "desc")
+      .limit(500)
+      .get();
 
-    const rankBatch = writeBatch(db);
+    const rankBatch = adminDb.batch();
     scoresSnap.docs.forEach((d, idx) => {
       rankBatch.update(d.ref, { position: idx + 1 });
     });
