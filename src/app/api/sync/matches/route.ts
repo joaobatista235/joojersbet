@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "@/lib/firebase-admin";
 import { calculateScore } from "@/lib/scoring";
+import { syncMatchesFromApi } from "@/lib/matches-sync";
 
 export const runtime = "nodejs";
 
@@ -46,15 +47,28 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const finishedSnap = await adminDb
-      .collection("matches")
-      .where("status", "==", "FINISHED")
-      .limit(100)
-      .get();
+    const syncedCount = await syncMatchesFromApi();
 
-    const unprocessed = finishedSnap.docs
+    const matchesSnap = await adminDb.collection("matches").limit(1000).get();
+
+    const unprocessed = matchesSnap.docs
       .filter((d) => !d.data().scoredAt)
-      .map((d) => ({ id: d.id, ...d.data() } as RawMatch));
+      .map((d) => ({ id: d.id, ...d.data() } as RawMatch))
+      .filter((match) => {
+        const hasFinalScore =
+          match.homeScore !== null &&
+          match.awayScore !== null &&
+          match.homeScore !== undefined &&
+          match.awayScore !== undefined;
+
+        const missingFinishedState =
+          match.status !== "FINISHED" &&
+          match.status !== "LIVE" &&
+          match.status !== "UPCOMING" &&
+          match.status !== "OTHER";
+
+        return match.status === "FINISHED" || hasFinalScore || missingFinishedState;
+      });
 
     if (unprocessed.length === 0) {
       return Response.json({ ok: true, processed: 0, message: "Nada a processar" });
@@ -64,7 +78,19 @@ export async function POST(request: NextRequest) {
     const affectedUsers = new Map<string, UserAccumulator>();
 
     for (const match of unprocessed) {
-      if (match.homeScore === null || match.awayScore === null) continue;
+      const hasFinalScore =
+        match.homeScore !== null &&
+        match.awayScore !== null &&
+        match.homeScore !== undefined &&
+        match.awayScore !== undefined;
+
+      if (!hasFinalScore) continue;
+
+      const matchRef = adminDb.collection("matches").doc(match.id);
+      const statusUpdate = match.status === "FINISHED" ? {} : { status: "FINISHED" };
+
+      const realHome = match.homeScore as number;
+      const realAway = match.awayScore as number;
 
       const predsSnap = await adminDb
         .collection("predictions")
@@ -72,7 +98,8 @@ export async function POST(request: NextRequest) {
         .get();
 
       if (predsSnap.empty) {
-        await adminDb.collection("matches").doc(match.id).update({
+        await matchRef.update({
+          ...statusUpdate,
           scoredAt: FieldValue.serverTimestamp(),
         });
         continue;
@@ -88,8 +115,8 @@ export async function POST(request: NextRequest) {
         const scoring = calculateScore({
           predHome: pred.homeGoals,
           predAway: pred.awayGoals,
-          realHome: match.homeScore,
-          realAway: match.awayScore,
+          realHome,
+          realAway,
         });
 
         const resultId = `${match.id}_${pred.userId}`;
@@ -100,8 +127,8 @@ export async function POST(request: NextRequest) {
           matchId: match.id,
           category: "futebol",
           leagueId: match.leagueId ?? null,
-          homeScore: match.homeScore,
-          awayScore: match.awayScore,
+          homeScore: realHome,
+          awayScore: realAway,
           homeGoals: pred.homeGoals,
           awayGoals: pred.awayGoals,
           exactScore: scoring.exactScore,
@@ -150,7 +177,8 @@ export async function POST(request: NextRequest) {
         affectedUsers.set(pred.userId, acc);
       }
 
-      batch.update(adminDb.collection("matches").doc(match.id), {
+      batch.update(matchRef, {
+        ...statusUpdate,
         scoredAt: FieldValue.serverTimestamp(),
       });
 
@@ -158,7 +186,7 @@ export async function POST(request: NextRequest) {
       totalProcessed++;
     }
 
-    for (const [uid, _acc] of affectedUsers) {
+    for (const [uid] of affectedUsers) {
       const allResultsSnap = await adminDb
         .collection("predictionResults")
         .where("userId", "==", uid)
@@ -167,7 +195,7 @@ export async function POST(request: NextRequest) {
       let totalPoints = 0;
       let totalPredictions = 0;
       let correctPredictions = 0;
-      const categories: any = {};
+      const categories: Record<string, { geral: { totalPoints: number; totalPredictions: number; correctPredictions: number; accuracy?: number }; leagues: Record<string, { totalPoints: number; totalPredictions: number; correctPredictions: number; accuracy?: number }> }> = {};
 
       for (const r of allResultsSnap.docs) {
         const d = r.data();
@@ -239,6 +267,7 @@ export async function POST(request: NextRequest) {
       ok: true,
       processed: totalProcessed,
       usersUpdated: affectedUsers.size,
+      syncedMatches: syncedCount,
     });
   } catch (err) {
     console.error("[score/process]", err);
