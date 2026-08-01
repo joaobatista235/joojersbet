@@ -6,7 +6,9 @@ import { Clock } from "lucide-react";
 interface LiveMatch {
   id: string;
   homeTeam: string;
+  homeLogo?: string;
   awayTeam: string;
+  awayLogo?: string;
   homeScore: number;
   awayScore: number;
   minute: number;
@@ -16,12 +18,40 @@ interface LiveMatch {
   pointsEarned?: number;
 }
 
+
 interface LiveMatchCardProps {
   match: LiveMatch;
   delay?: number;
 }
 
 export function LiveMatchCard({ match, delay = 0 }: LiveMatchCardProps) {
+  const renderLogo = (src?: string, name?: string) => {
+    if (!src) {
+      return (
+        <img
+          src={`https://ui-avatars.com/api/?name=${encodeURIComponent(name || "Time")}&background=random&color=fff&size=48`}
+          alt={name}
+          style={{ width: 24, height: 24, borderRadius: "50%", objectFit: "cover" }}
+        />
+      );
+    }
+    const displaySrc = src.includes("media.api-sports.io")
+      ? `/api/image-proxy?url=${encodeURIComponent(src)}`
+      : src;
+    return (
+      <img
+        src={displaySrc}
+        alt={name}
+        crossOrigin="anonymous"
+        referrerPolicy="no-referrer"
+        style={{ width: 24, height: 24, objectFit: "contain" }}
+        onError={(e) => {
+          e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name || "Time")}&background=random&color=fff&size=48`;
+        }}
+      />
+    );
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, x: -10 }}
@@ -51,11 +81,13 @@ export function LiveMatchCard({ match, delay = 0 }: LiveMatchCardProps) {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 32px",
+            gridTemplateColumns: "24px 1fr 32px",
+            gap: 8,
             alignItems: "center",
             marginBottom: 10,
           }}
         >
+          {renderLogo(match.homeLogo, match.homeTeam)}
           <span
             style={{
               fontSize: 15,
@@ -83,11 +115,13 @@ export function LiveMatchCard({ match, delay = 0 }: LiveMatchCardProps) {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 32px",
+            gridTemplateColumns: "24px 1fr 32px",
+            gap: 8,
             alignItems: "center",
             marginBottom: 14,
           }}
         >
+          {renderLogo(match.awayLogo, match.awayTeam)}
           <span
             style={{
               fontSize: 15,

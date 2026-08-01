@@ -1,8 +1,57 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Clock, Activity } from "lucide-react";
 import { useMatches } from "@/hooks/useMatches";
+
+function TeamLogo({
+  src,
+  alt,
+  name,
+  size = 48,
+}: {
+  src?: string | null;
+  alt: string;
+  name: string;
+  size?: number;
+}) {
+  const [imageSrc, setImageSrc] = useState(src ?? "");
+  const [hasError, setHasError] = useState(!src);
+
+  useEffect(() => {
+    setImageSrc(src ?? "");
+    setHasError(!src);
+  }, [src]);
+
+  const fallbackSrc = `https://ui-avatars.com/api/?name=${encodeURIComponent(name || "Time")}&background=random&color=fff&size=${size * 2}`;
+
+  if (!imageSrc || hasError) {
+    return (
+      <img
+        src={fallbackSrc}
+        alt={alt}
+        loading="lazy"
+        style={{ width: size, height: size, objectFit: "cover", borderRadius: "50%" }}
+      />
+    );
+  }
+    const displaySrc = imageSrc.includes("media.api-sports.io")
+      ? `/api/image-proxy?url=${encodeURIComponent(imageSrc)}`
+      : imageSrc;
+
+    return (
+      <img
+        src={displaySrc}
+        alt={alt}
+        loading="lazy"
+        crossOrigin="anonymous"
+        referrerPolicy="no-referrer"
+        onError={() => setHasError(true)}
+        style={{ width: size, height: size, objectFit: "contain", borderRadius: "50%" }}
+      />
+    );
+}
 
 export default function AoVivoPage() {
   const { matches, loading } = useMatches("LIVE");
@@ -99,12 +148,14 @@ export default function AoVivoPage() {
               {/* Status Header */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 6 }}>
-                  <img 
-                    src={match.competitionLogo} 
-                    alt={match.competition} 
-                    referrerPolicy="no-referrer"
+                  <img
+                    src={match.competitionLogo && match.competitionLogo.includes("media.api-sports.io")
+                      ? `/api/image-proxy?url=${encodeURIComponent(match.competitionLogo)}`
+                      : match.competitionLogo}
+                    alt={match.competition}
+                    loading="lazy"
                     onError={(e) => { e.currentTarget.style.display = "none"; }}
-                    style={{ width: 14, height: 14, objectFit: "contain" }} 
+                    style={{ width: 14, height: 14, objectFit: "contain" }}
                   />
                   {match.competition}
                 </div>
@@ -118,13 +169,7 @@ export default function AoVivoPage() {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 {/* Home */}
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, flex: 1 }}>
-                  <img 
-                    src={match.homeLogo} 
-                    alt={match.homeTeam} 
-                    referrerPolicy="no-referrer"
-                    onError={(e) => { e.currentTarget.src = "https://ui-avatars.com/api/?name=" + match.homeTeam + "&background=random"; }}
-                    style={{ width: 48, height: 48, objectFit: "contain", borderRadius: "50%" }} 
-                  />
+                  <TeamLogo src={match.homeLogo} alt={match.homeTeam} name={match.homeTeam} size={48} />
                   <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", textAlign: "center" }}>
                     {match.homeTeam}
                   </div>
@@ -143,13 +188,7 @@ export default function AoVivoPage() {
 
                 {/* Away */}
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, flex: 1 }}>
-                  <img 
-                    src={match.awayLogo} 
-                    alt={match.awayTeam} 
-                    referrerPolicy="no-referrer"
-                    onError={(e) => { e.currentTarget.src = "https://ui-avatars.com/api/?name=" + match.awayTeam + "&background=random"; }}
-                    style={{ width: 48, height: 48, objectFit: "contain", borderRadius: "50%" }} 
-                  />
+                  <TeamLogo src={match.awayLogo} alt={match.awayTeam} name={match.awayTeam} size={48} />
                   <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", textAlign: "center" }}>
                     {match.awayTeam}
                   </div>

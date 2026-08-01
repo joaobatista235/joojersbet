@@ -144,3 +144,14 @@ export async function getUpcomingFixtures(days = 3): Promise<Match[]> {
   const results = await Promise.all(promises);
   return results.flat();
 }
+
+export async function getFixtureById(fixtureId: string): Promise<Match | null> {
+  const data = await apiFetch<ApiFixtureItem>(
+    "/fixtures",
+    { id: fixtureId },
+    60
+  );
+  const item = data.response[0];
+  if (!item) return null;
+  return normalizeFixture(item);
+}

@@ -1,2 +1,8 @@
 {
+  "crons": [
+    {
+      "path": "/api/sync/matches?secret=senha-muito-boa",
+      "schedule": "*/10 * * * *"
+    }
+  ]
 }

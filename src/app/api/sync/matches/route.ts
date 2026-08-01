@@ -5,6 +5,7 @@ import { calculateScore } from "@/lib/scoring";
 import { syncMatchesFromApi } from "@/lib/matches-sync";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 const EXPECTED_SECRET = process.env.SYNC_SECRET ?? "dev";
 
@@ -27,18 +28,15 @@ interface RawPrediction {
   awayGoals: number;
 }
 
-interface UserAccumulator {
-  totalPoints: number;
-  totalPredictions: number;
-  correctPredictions: number;
+function getSecret(request: NextRequest): string {
+  return (
+    request.headers.get("x-sync-secret") ??
+    request.nextUrl.searchParams.get("secret") ??
+    ""
+  );
 }
 
-export async function POST(request: NextRequest) {
-  const secret = request.headers.get("x-sync-secret") ?? "";
-  if (secret !== EXPECTED_SECRET) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+async function handleSync() {
   if (!adminDb) {
     return Response.json(
       { error: "Firestore não configurado" },
@@ -48,6 +46,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const syncedCount = await syncMatchesFromApi();
+    console.log(`[sync] Synced ${syncedCount} matches from API`);
 
     const matchesSnap = await adminDb.collection("matches").limit(1000).get();
 
@@ -61,21 +60,22 @@ export async function POST(request: NextRequest) {
           match.homeScore !== undefined &&
           match.awayScore !== undefined;
 
-        const missingFinishedState =
-          match.status !== "FINISHED" &&
-          match.status !== "LIVE" &&
-          match.status !== "UPCOMING" &&
-          match.status !== "OTHER";
-
-        return match.status === "FINISHED" || hasFinalScore || missingFinishedState;
+        return match.status === "FINISHED" || hasFinalScore;
       });
 
+    console.log(`[sync] Unprocessed matches with scores: ${unprocessed.length}`);
+
     if (unprocessed.length === 0) {
-      return Response.json({ ok: true, processed: 0, message: "Nada a processar" });
+      return Response.json({
+        ok: true,
+        processed: 0,
+        syncedMatches: syncedCount,
+        message: "Nada a processar",
+      });
     }
 
     let totalProcessed = 0;
-    const affectedUsers = new Map<string, UserAccumulator>();
+    const affectedUsers = new Set<string>();
 
     for (const match of unprocessed) {
       const hasFinalScore =
@@ -87,8 +87,6 @@ export async function POST(request: NextRequest) {
       if (!hasFinalScore) continue;
 
       const matchRef = adminDb.collection("matches").doc(match.id);
-      const statusUpdate = match.status === "FINISHED" ? {} : { status: "FINISHED" };
-
       const realHome = match.homeScore as number;
       const realAway = match.awayScore as number;
 
@@ -99,9 +97,10 @@ export async function POST(request: NextRequest) {
 
       if (predsSnap.empty) {
         await matchRef.update({
-          ...statusUpdate,
+          status: "FINISHED",
           scoredAt: FieldValue.serverTimestamp(),
         });
+        totalProcessed++;
         continue;
       }
 
@@ -144,7 +143,7 @@ export async function POST(request: NextRequest) {
             const userData = userSnap.data()!;
             let message = "";
             if (scoring.exactScore) {
-              message = `acertou o placar exato de ${match.homeTeam} × ${match.awayTeam} — ${match.homeScore}×${match.awayScore}`;
+              message = `acertou o placar exato de ${match.homeTeam} × ${match.awayTeam} — ${realHome}×${realAway}`;
             } else if (scoring.correctGoalDiff) {
               message = `acertou o saldo de gols de ${match.homeTeam} × ${match.awayTeam}`;
             } else {
@@ -156,7 +155,7 @@ export async function POST(request: NextRequest) {
               userId: pred.userId,
               user: userData.name || "Jogador",
               initials: userData.initials || "?",
-              avatarColor: userData.avatarColor || "#f97316",
+              photoURL: userData.photoURL || null,
               message,
               createdAt: FieldValue.serverTimestamp(),
             });
@@ -166,27 +165,20 @@ export async function POST(request: NextRequest) {
         const predRef = adminDb.collection("predictions").doc(pred.id);
         batch.update(predRef, { locked: true });
 
-        const acc = affectedUsers.get(pred.userId) ?? {
-          totalPoints: 0,
-          totalPredictions: 0,
-          correctPredictions: 0,
-        };
-        acc.totalPoints += scoring.pointsEarned;
-        acc.totalPredictions += 1;
-        if (scoring.correctWinner) acc.correctPredictions += 1;
-        affectedUsers.set(pred.userId, acc);
+        affectedUsers.add(pred.userId);
       }
 
       batch.update(matchRef, {
-        ...statusUpdate,
+        status: "FINISHED",
         scoredAt: FieldValue.serverTimestamp(),
       });
 
       await batch.commit();
       totalProcessed++;
+      console.log(`[sync] Processed match ${match.id}: ${match.homeTeam} ${realHome}x${realAway} ${match.awayTeam} (${preds.length} preds)`);
     }
 
-    for (const [uid] of affectedUsers) {
+    for (const uid of affectedUsers) {
       const allResultsSnap = await adminDb
         .collection("predictionResults")
         .where("userId", "==", uid)
@@ -195,45 +187,51 @@ export async function POST(request: NextRequest) {
       let totalPoints = 0;
       let totalPredictions = 0;
       let correctPredictions = 0;
-      const categories: Record<string, { geral: { totalPoints: number; totalPredictions: number; correctPredictions: number; accuracy?: number }; leagues: Record<string, { totalPoints: number; totalPredictions: number; correctPredictions: number; accuracy?: number }> }> = {};
+      const categories: Record<string, {
+        geral: { totalPoints: number; totalPredictions: number; correctPredictions: number; accuracy: number };
+        leagues: Record<string, { totalPoints: number; totalPredictions: number; correctPredictions: number; accuracy: number }>;
+      }> = {};
 
       for (const r of allResultsSnap.docs) {
         const d = r.data();
         const pts = d.pointsEarned ?? 0;
-        const isCorrect = d.correctWinner ? 1 : 0;
 
         totalPoints += pts;
         totalPredictions += 1;
         if (d.correctWinner) correctPredictions += 1;
 
         const cat = d.category || "futebol";
-        const league = d.leagueId || "others";
+        const league = String(d.leagueId || "others");
 
-        if (!categories[cat]) categories[cat] = { geral: { totalPoints: 0, totalPredictions: 0, correctPredictions: 0 }, leagues: {} };
-        if (!categories[cat].leagues[league]) categories[cat].leagues[league] = { totalPoints: 0, totalPredictions: 0, correctPredictions: 0 };
+        if (!categories[cat]) {
+          categories[cat] = {
+            geral: { totalPoints: 0, totalPredictions: 0, correctPredictions: 0, accuracy: 0 },
+            leagues: {},
+          };
+        }
+        if (!categories[cat].leagues[league]) {
+          categories[cat].leagues[league] = { totalPoints: 0, totalPredictions: 0, correctPredictions: 0, accuracy: 0 };
+        }
 
         categories[cat].geral.totalPoints += pts;
         categories[cat].geral.totalPredictions += 1;
-        categories[cat].geral.correctPredictions += isCorrect;
+        if (d.correctWinner) categories[cat].geral.correctPredictions += 1;
 
         categories[cat].leagues[league].totalPoints += pts;
         categories[cat].leagues[league].totalPredictions += 1;
-        categories[cat].leagues[league].correctPredictions += isCorrect;
+        if (d.correctWinner) categories[cat].leagues[league].correctPredictions += 1;
       }
 
       for (const cat in categories) {
-        categories[cat].geral.accuracy = categories[cat].geral.totalPredictions > 0
-          ? Math.round((categories[cat].geral.correctPredictions / categories[cat].geral.totalPredictions) * 100) : 0;
+        const g = categories[cat].geral;
+        g.accuracy = g.totalPredictions > 0 ? Math.round((g.correctPredictions / g.totalPredictions) * 100) : 0;
         for (const l in categories[cat].leagues) {
-          categories[cat].leagues[l].accuracy = categories[cat].leagues[l].totalPredictions > 0
-            ? Math.round((categories[cat].leagues[l].correctPredictions / categories[cat].leagues[l].totalPredictions) * 100) : 0;
+          const lg = categories[cat].leagues[l];
+          lg.accuracy = lg.totalPredictions > 0 ? Math.round((lg.correctPredictions / lg.totalPredictions) * 100) : 0;
         }
       }
 
-      const accuracy =
-        totalPredictions > 0
-          ? Math.round((correctPredictions / totalPredictions) * 100)
-          : 0;
+      const accuracy = totalPredictions > 0 ? Math.round((correctPredictions / totalPredictions) * 100) : 0;
 
       const scoreRef = adminDb.collection("userScores").doc(uid);
       await scoreRef.set(
@@ -263,6 +261,8 @@ export async function POST(request: NextRequest) {
     });
     await rankBatch.commit();
 
+    console.log(`[sync] Done: ${totalProcessed} matches, ${affectedUsers.size} users updated`);
+
     return Response.json({
       ok: true,
       processed: totalProcessed,
@@ -270,10 +270,24 @@ export async function POST(request: NextRequest) {
       syncedMatches: syncedCount,
     });
   } catch (err) {
-    console.error("[score/process]", err);
+    console.error("[sync/matches] Error:", err);
     return Response.json(
-      { error: "Erro ao processar pontuação", detail: String(err) },
+      { error: "Erro ao processar", detail: String(err) },
       { status: 500 }
     );
   }
+}
+
+export async function POST(request: NextRequest) {
+  if (getSecret(request) !== EXPECTED_SECRET) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  return handleSync();
+}
+
+export async function GET(request: NextRequest) {
+  if (getSecret(request) !== EXPECTED_SECRET) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  return handleSync();
 }

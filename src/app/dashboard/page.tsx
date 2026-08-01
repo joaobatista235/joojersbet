@@ -84,7 +84,9 @@ function toLiveCardProps(match: Match) {
   return {
     id: match.id,
     homeTeam: match.homeTeam,
+    homeLogo: match.homeLogo,
     awayTeam: match.awayTeam,
+    awayLogo: match.awayLogo,
     homeScore: match.homeScore ?? 0,
     awayScore: match.awayScore ?? 0,
     minute: match.minute ?? 0,

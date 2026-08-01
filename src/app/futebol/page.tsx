@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { collection, getDocs, deleteDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+
 import {
   Zap,
   Calendar,
@@ -444,27 +443,6 @@ export default function FutebolPage() {
   const { matches: finished, loading: finishedLoading } = useMatches("FINISHED", 200);
   const { byMatch } = usePredictions();
 
-  // TEMPORARY: Wipe old unauthorized matches that block the limit(50)
-  useEffect(() => {
-    async function wipeOld() {
-      if (!db) return;
-      try {
-        const snap = await getDocs(collection(db, "matches"));
-        let count = 0;
-        for (const doc of snap.docs) {
-          const data = doc.data();
-          if (!data.leagueId) {
-            await deleteDoc(doc.ref);
-            count++;
-          }
-        }
-        if (count > 0) console.log("Limpou jogos antigos:", count);
-      } catch (err) {
-        console.error("Erro no wipe:", err);
-      }
-    }
-    wipeOld();
-  }, []);
 
   const loading = tab === "upcoming" ? upLoading : (tab === "live" ? liveLoading : finishedLoading);
   const matches = tab === "upcoming" ? upcoming : (tab === "live" ? live : finished);
