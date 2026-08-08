@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { syncMatchesFromApi } from "@/lib/matches-sync";
 import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "@/lib/firebase-admin";
 import { calculateScore } from "@/lib/scoring";
@@ -37,13 +38,13 @@ function getSecret(request: NextRequest): string {
 
 async function handleProcess() {
   if (!adminDb) {
-    return Response.json(
-      { error: "Firestore não configurado" },
-      { status: 500 }
-    );
+    return Response.json({ error: "Firestore não configurado" }, { status: 500 });
   }
 
   try {
+    const syncedCount = await syncMatchesFromApi();
+    console.log(`[score/process] Synced ${syncedCount} matches`);
+
     const matchesSnap = await adminDb.collection("matches").limit(1000).get();
 
     const unprocessed = matchesSnap.docs
@@ -55,14 +56,13 @@ async function handleProcess() {
           match.awayScore !== null &&
           match.homeScore !== undefined &&
           match.awayScore !== undefined;
-
         return match.status === "FINISHED" || hasFinalScore;
       });
 
     console.log(`[score/process] Unprocessed matches: ${unprocessed.length}`);
 
     if (unprocessed.length === 0) {
-      return Response.json({ ok: true, processed: 0, message: "Nada a processar" });
+      return Response.json({ ok: true, processed: 0, syncedMatches: syncedCount, message: "Nada a processar" });
     }
 
     let totalProcessed = 0;
@@ -87,18 +87,12 @@ async function handleProcess() {
         .get();
 
       if (predsSnap.empty) {
-        await matchRef.update({
-          status: "FINISHED",
-          scoredAt: FieldValue.serverTimestamp(),
-        });
+        await matchRef.update({ status: "FINISHED", scoredAt: FieldValue.serverTimestamp() });
         totalProcessed++;
         continue;
       }
 
-      const preds = predsSnap.docs.map(
-        (d) => ({ id: d.id, ...d.data() } as RawPrediction)
-      );
-
+      const preds = predsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as RawPrediction));
       const batch = adminDb.batch();
 
       for (const pred of preds) {
@@ -140,7 +134,6 @@ async function handleProcess() {
             } else {
               message = `acertou o vencedor de ${match.homeTeam} × ${match.awayTeam}`;
             }
-
             const feedId = `${match.id}_${pred.userId}_score`;
             batch.set(adminDb.collection("feedEvents").doc(feedId), {
               userId: pred.userId,
@@ -153,17 +146,11 @@ async function handleProcess() {
           }
         }
 
-        const predRef = adminDb.collection("predictions").doc(pred.id);
-        batch.update(predRef, { locked: true });
-
+        batch.update(adminDb.collection("predictions").doc(pred.id), { locked: true });
         affectedUsers.add(pred.userId);
       }
 
-      batch.update(matchRef, {
-        status: "FINISHED",
-        scoredAt: FieldValue.serverTimestamp(),
-      });
-
+      batch.update(matchRef, { status: "FINISHED", scoredAt: FieldValue.serverTimestamp() });
       await batch.commit();
       totalProcessed++;
     }
@@ -223,8 +210,7 @@ async function handleProcess() {
 
       const accuracy = totalPredictions > 0 ? Math.round((correctPredictions / totalPredictions) * 100) : 0;
 
-      const scoreRef = adminDb.collection("userScores").doc(uid);
-      await scoreRef.set(
+      await adminDb.collection("userScores").doc(uid).set(
         {
           totalPoints,
           totalPredictions,
@@ -251,17 +237,17 @@ async function handleProcess() {
     });
     await rankBatch.commit();
 
+    console.log(`[score/process] Done: ${totalProcessed} matches, ${affectedUsers.size} users`);
+
     return Response.json({
       ok: true,
       processed: totalProcessed,
       usersUpdated: affectedUsers.size,
+      syncedMatches: syncedCount,
     });
   } catch (err) {
     console.error("[score/process] Error:", err);
-    return Response.json(
-      { error: "Erro ao processar pontuação", detail: String(err) },
-      { status: 500 }
-    );
+    return Response.json({ error: "Erro ao processar", detail: String(err) }, { status: 500 });
   }
 }
 

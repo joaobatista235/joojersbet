@@ -1,9 +1,11 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "@/lib/firebase-admin";
 import { getLiveMatches, getFixturesByDate, getFixtureById } from "@/lib/api-football/client";
+import type { Match } from "@/lib/api-football/types";
 
-const MAX_SYNC_DATES = 5;
-const MAX_STALE_LOOKUPS = 15;
+const PROACTIVE_DAYS_AHEAD = 7;
+const PROACTIVE_DAYS_BEHIND = 1;
+const MAX_STALE_LOOKUPS = 20;
 
 function toDateKey(value?: string | null): string | null {
   if (!value) return null;
@@ -12,21 +14,18 @@ function toDateKey(value?: string | null): string | null {
   return parsed.toISOString().slice(0, 10);
 }
 
-function collectDateCandidates(set: Set<string>, value?: string | null) {
-  const key = toDateKey(value);
-  if (!key) return;
-  set.add(key);
-  const baseDate = new Date(`${key}T00:00:00.000Z`);
-  for (const offset of [-1, 0, 1]) {
-    const candidate = new Date(baseDate);
-    candidate.setDate(baseDate.getDate() + offset);
-    set.add(candidate.toISOString().slice(0, 10));
-  }
-}
-
 export async function syncMatchesFromApi(): Promise<number> {
   if (!adminDb) {
     throw new Error("Firestore não configurado");
+  }
+
+  const now = new Date();
+
+  const dateCandidates = new Set<string>();
+  for (let offset = -PROACTIVE_DAYS_BEHIND; offset <= PROACTIVE_DAYS_AHEAD; offset++) {
+    const candidate = new Date(now);
+    candidate.setDate(now.getDate() + offset);
+    dateCandidates.add(candidate.toISOString().slice(0, 10));
   }
 
   const existingSnap = await adminDb
@@ -35,22 +34,18 @@ export async function syncMatchesFromApi(): Promise<number> {
     .limit(400)
     .get();
 
-  const dateCandidates = new Set<string>();
-  const now = new Date();
-
-  for (const offset of [-1, 0, 1]) {
-    const candidate = new Date(now);
-    candidate.setDate(now.getDate() + offset);
-    dateCandidates.add(candidate.toISOString().slice(0, 10));
-  }
-
   const staleMatchIds: string[] = [];
 
   existingSnap.docs.forEach((doc) => {
     const data = doc.data() as { startTime?: string; status?: string };
-    collectDateCandidates(dateCandidates, data.startTime);
 
-    if (data.startTime && (data.status === "UPCOMING" || data.status === "LIVE" || data.status === "OTHER")) {
+    const key = toDateKey(data.startTime);
+    if (key) dateCandidates.add(key);
+
+    if (
+      data.startTime &&
+      (data.status === "UPCOMING" || data.status === "LIVE" || data.status === "OTHER")
+    ) {
       const startDate = new Date(data.startTime);
       const hoursAgo = (now.getTime() - startDate.getTime()) / (1000 * 60 * 60);
       if (hoursAgo > 3) {
@@ -59,19 +54,18 @@ export async function syncMatchesFromApi(): Promise<number> {
     }
   });
 
-  const relevantDates = Array.from(dateCandidates).sort().slice(0, MAX_SYNC_DATES);
+  const relevantDates = Array.from(dateCandidates).sort();
 
-  const requests = [getLiveMatches()];
-  for (const date of relevantDates) {
-    requests.push(getFixturesByDate(date));
-  }
+  console.log(`[sync] Fetching dates: ${relevantDates.join(", ")}`);
 
-  const [liveMatches, ...dateMatches] = await Promise.all(requests);
-  const allMatches = [...liveMatches, ...dateMatches.flat()];
+  const dateResults = await Promise.all(relevantDates.map((d) => getFixturesByDate(d)));
+  const liveMatches = await getLiveMatches();
 
-  const matchMap = new Map<string, typeof allMatches[0]>();
-  for (const m of allMatches) {
-    matchMap.set(m.id, m);
+  const matchMap = new Map<string, Match>();
+
+  for (const m of liveMatches) matchMap.set(m.id, m);
+  for (const batch of dateResults) {
+    for (const m of batch) matchMap.set(m.id, m);
   }
 
   const lookups = staleMatchIds
@@ -89,6 +83,7 @@ export async function syncMatchesFromApi(): Promise<number> {
   }
 
   const uniqueMatches = Array.from(matchMap.values());
+  console.log(`[sync] Total matches to upsert: ${uniqueMatches.length}`);
 
   if (uniqueMatches.length === 0) {
     return 0;
@@ -97,18 +92,15 @@ export async function syncMatchesFromApi(): Promise<number> {
   const BATCH_LIMIT = 490;
   for (let i = 0; i < uniqueMatches.length; i += BATCH_LIMIT) {
     const chunk = uniqueMatches.slice(i, i + BATCH_LIMIT);
-    const batch = adminDb.batch();
+    const writeBatch = adminDb.batch();
     for (const match of chunk) {
-      batch.set(
+      writeBatch.set(
         adminDb.collection("matches").doc(match.id),
-        {
-          ...match,
-          updatedAt: FieldValue.serverTimestamp(),
-        },
+        { ...match, updatedAt: FieldValue.serverTimestamp() },
         { merge: true }
       );
     }
-    await batch.commit();
+    await writeBatch.commit();
   }
 
   return uniqueMatches.length;
