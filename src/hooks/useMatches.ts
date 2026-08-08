@@ -73,6 +73,11 @@ export function useMatches(
           ]);
           data = data.filter((m) => m.leagueId && ALLOWED.has(m.leagueId));
 
+          if (status === "UPCOMING") {
+            const cutoff = Date.now() - 3 * 60 * 60 * 1000;
+            data = data.filter((m) => new Date(m.startTime).getTime() > cutoff);
+          }
+
           if (status === "FINISHED") {
             data.sort((a, b) => b.startTime.localeCompare(a.startTime));
             data = data.slice(0, maxResults);

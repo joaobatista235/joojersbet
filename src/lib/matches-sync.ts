@@ -85,22 +85,33 @@ export async function syncMatchesFromApi(): Promise<number> {
   const uniqueMatches = Array.from(matchMap.values());
   console.log(`[sync] Total matches to upsert: ${uniqueMatches.length}`);
 
-  if (uniqueMatches.length === 0) {
-    return 0;
+  const BATCH_LIMIT = 490;
+  if (uniqueMatches.length > 0) {
+    for (let i = 0; i < uniqueMatches.length; i += BATCH_LIMIT) {
+      const chunk = uniqueMatches.slice(i, i + BATCH_LIMIT);
+      const writeBatch = adminDb.batch();
+      for (const match of chunk) {
+        writeBatch.set(
+          adminDb.collection("matches").doc(match.id),
+          { ...match, updatedAt: FieldValue.serverTimestamp() },
+          { merge: true }
+        );
+      }
+      await writeBatch.commit();
+    }
   }
 
-  const BATCH_LIMIT = 490;
-  for (let i = 0; i < uniqueMatches.length; i += BATCH_LIMIT) {
-    const chunk = uniqueMatches.slice(i, i + BATCH_LIMIT);
-    const writeBatch = adminDb.batch();
-    for (const match of chunk) {
-      writeBatch.set(
-        adminDb.collection("matches").doc(match.id),
-        { ...match, updatedAt: FieldValue.serverTimestamp() },
-        { merge: true }
-      );
+  const orphanIds = staleMatchIds.filter((id) => !matchMap.has(id));
+  if (orphanIds.length > 0) {
+    console.log(`[sync] Force-finishing ${orphanIds.length} orphan stale matches`);
+    const orphanBatch = adminDb.batch();
+    for (const id of orphanIds) {
+      orphanBatch.update(adminDb.collection("matches").doc(id), {
+        status: "FINISHED",
+        updatedAt: FieldValue.serverTimestamp(),
+      });
     }
-    await writeBatch.commit();
+    await orphanBatch.commit();
   }
 
   return uniqueMatches.length;
