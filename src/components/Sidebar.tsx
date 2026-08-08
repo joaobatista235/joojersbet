@@ -11,32 +11,37 @@ import {
   User,
   Settings,
   Gamepad2,
+  Swords,
+  Shuffle,
   Trophy,
   ChevronLeft,
   ChevronRight,
   LogOut,
+  ShieldCheck,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSidebar } from "./SidebarContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { isAdmin } from "@/lib/admin";
 
-/* ─── constants ─────────────────────────── */
 const OPEN_W = 256;
 const CLOSED_W = 72;
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/futebol", label: "Futebol", icon: Zap },
+  { href: "/cs2", label: "Counter-Strike 2", icon: Gamepad2 },
+  { href: "/ufc", label: "UFC", icon: Swords },
   { href: "/ao-vivo", label: "Ao vivo", icon: Radio },
+  { href: "/apostas", label: "Apostas", icon: Shuffle },
   { href: "/rankings", label: "Rankings", icon: BarChart2 },
   { href: "/grupos", label: "Grupos", icon: Users },
   { href: "/perfil", label: "Perfil", icon: User },
   { href: "/configuracoes", label: "Configurações", icon: Settings },
 ];
 
-const comingSoon = [
-  { label: "Counter Strike 2", icon: Gamepad2 },
-];
+const comingSoon: { label: string; icon: React.ElementType }[] = [];
+
 
 const MOCK_USER = {
   name: "João Becker",
@@ -400,15 +405,17 @@ export function Sidebar() {
                 >
                   {profile.name}
                 </p>
-                <p
-                  style={{
-                    fontSize: 11,
-                    color: "var(--text-secondary)",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {profile.city}
-                </p>
+                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <p style={{ fontSize: 11, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>
+                    {profile.city}
+                  </p>
+                  {user && isAdmin(user.uid) && (
+                    <span style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 10, fontWeight: 700, color: "var(--orange-400)", backgroundColor: "var(--orange-glow)", padding: "1px 5px", borderRadius: 4 }}>
+                      <ShieldCheck size={9} />
+                      Admin
+                    </span>
+                  )}
+                </div>
               </motion.div>
             )}
           </AnimatePresence>

@@ -1,10 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Target, Trophy, Medal, Award, TrendingUp } from "lucide-react";
 import { useRanking, type RankingEntry } from "@/hooks/useRanking";
 import { useAuth } from "@/contexts/AuthContext";
+import { db } from "@/lib/firebase";
+import { collection, query, orderBy, limit, onSnapshot } from "firebase/firestore";
+
+function useSimpleRanking(collectionName: string, maxEntries = 50) {
+  const [entries, setEntries] = useState<RankingEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!db) { setLoading(false); return; }
+    const q = query(collection(db, collectionName), orderBy("totalPoints", "desc"), limit(maxEntries));
+    const unsub = onSnapshot(q, (snap) => {
+      setEntries(snap.docs.map((d, idx) => {
+        const raw = d.data();
+        return {
+          uid: d.id, position: idx + 1,
+          totalPoints: raw.totalPoints ?? 0, accuracy: raw.accuracy ?? 0,
+          totalPredictions: raw.totalPredictions ?? 0, correctPredictions: raw.correctPredictions ?? 0,
+          updatedAt: raw.updatedAt ?? null, name: raw.name, initials: raw.initials, photoURL: raw.photoURL ?? null, city: raw.city,
+        } as RankingEntry;
+      }));
+      setLoading(false);
+    }, () => setLoading(false));
+    return () => unsub();
+  }, [collectionName, maxEntries]);
+
+  return { entries, loading };
+}
 
 /* ─── Helpers ──────────────────────────────────────────────── */
 
@@ -473,10 +500,16 @@ function SummaryCard({
 export default function RankingsPage() {
   const { user } = useAuth();
   
+  const [sport, setSport] = useState<"futebol" | "cs2" | "ufc">("futebol");
   const [category, setCategory] = useState<string>("futebol");
   const [leagueId, setLeagueId] = useState<string>("geral");
-  
-  const { entries, loading } = useRanking(50, category, leagueId);
+
+  const { entries: footballEntries, loading: footballLoading } = useRanking(50, category, leagueId);
+  const { entries: cs2Entries, loading: cs2Loading } = useSimpleRanking("cs2UserScores", 50);
+  const { entries: ufcEntries, loading: ufcLoading } = useSimpleRanking("ufcUserScores", 50);
+
+  const entries = sport === "futebol" ? footballEntries : sport === "cs2" ? cs2Entries : ufcEntries;
+  const loading = sport === "futebol" ? footballLoading : sport === "cs2" ? cs2Loading : ufcLoading;
 
   const top3 = entries.slice(0, 3);
   const rest = entries.slice(3);
@@ -517,38 +550,16 @@ export default function RankingsPage() {
 
       {/* ── Tabs ── */}
       <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-        <button
-          onClick={() => {
-            setCategory("futebol");
-            setLeagueId("geral");
-          }}
-          style={{
-            padding: "8px 16px",
-            borderRadius: 8,
-            backgroundColor: category === "futebol" ? "var(--orange-500)" : "var(--bg-elevated)",
-            color: category === "futebol" ? "white" : "var(--text-primary)",
-            fontWeight: 600,
-            border: "none",
-            cursor: "pointer",
-          }}
-        >
-          Futebol
-        </button>
-        <button
-          disabled
-          style={{
-            padding: "8px 16px",
-            borderRadius: 8,
-            backgroundColor: "var(--bg-elevated)",
-            color: "var(--text-muted)",
-            fontWeight: 600,
-            border: "none",
-            cursor: "not-allowed",
-            opacity: 0.5
-          }}
-        >
-          CS2 (Em breve)
-        </button>
+        {(["futebol", "cs2", "ufc"] as const).map((s) => (
+          <button key={s} onClick={() => { setSport(s); setCategory(s); setLeagueId("geral"); }}
+            style={{
+              padding: "8px 16px", borderRadius: 8, fontWeight: 600, border: "none", cursor: "pointer",
+              backgroundColor: sport === s ? "var(--orange-500)" : "var(--bg-elevated)",
+              color: sport === s ? "white" : "var(--text-primary)",
+            }}>
+            {s === "futebol" ? "Futebol" : s === "cs2" ? "CS2" : "UFC"}
+          </button>
+        ))}
       </div>
 
       {category === "futebol" && (
