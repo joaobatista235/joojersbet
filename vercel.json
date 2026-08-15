@@ -1,12 +1,1 @@
-{
-  "crons": [
-    {
-      "path": "/api/score/process",
-      "schedule": "*/30 * * * *"
-    },
-    {
-      "path": "/api/sync/ufc",
-      "schedule": "*/30 * * * *"
-    }
-  ]
-}
+{}
