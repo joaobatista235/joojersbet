@@ -26,7 +26,6 @@ export function useCs2Matches(status: Cs2MatchStatus, maxResults = 20): UseCs2Ma
       const q = query(
         collection(db, "cs2Matches"),
         where("status", "==", status),
-        orderBy("startTime", status === "FINISHED" ? "desc" : "asc"),
         limit(maxResults)
       );
 
@@ -37,6 +36,12 @@ export function useCs2Matches(status: Cs2MatchStatus, maxResults = 20): UseCs2Ma
           const cutoff = Date.now() - 3 * 60 * 60 * 1000;
           data = data.filter((m) => new Date(m.startTime).getTime() > cutoff);
         }
+
+        data.sort((a, b) => {
+          const tA = new Date(a.startTime).getTime();
+          const tB = new Date(b.startTime).getTime();
+          return status === "FINISHED" ? tB - tA : tA - tB;
+        });
 
         setMatches(data);
         setLoading(false);

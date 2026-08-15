@@ -1,6 +1,8 @@
-// ─── API-Football v3 Client ───────────────────────────────────────────────────
-// Usa o cache nativo do Next.js 16 (fetch + next.revalidate).
+﻿// ============================================================
+// API-Football v3 Client
 // Nunca importar em client components — apenas em route handlers e server components.
+// Cache desabilitado (no-store) para garantir dados frescos em cron jobs.
+// ============================================================
 
 import type {
   ApiFixtureItem,
@@ -11,17 +13,18 @@ import type {
 
 const BASE_URL = "https://v3.football.api-sports.io";
 
-// ─── Fetch helper ─────────────────────────────────────────────────────────────
+// ============================================================
+// Fetch helper
+// ============================================================
 
 async function apiFetch<T>(
   path: string,
-  params: Record<string, string> = {},
-  revalidateSeconds = 60
+  params: Record<string, string> = {}
 ): Promise<ApiFootballResponse<T>> {
   const key = process.env.API_FOOTBALL_KEY;
   if (!key) {
     throw new Error(
-      "API_FOOTBALL_KEY não configurada. Adicione ao .env.local."
+      "API_FOOTBALL_KEY nao configurada. Adicione ao .env.local."
     );
   }
 
@@ -34,8 +37,8 @@ async function apiFetch<T>(
     headers: {
       "x-apisports-key": key,
     },
-    // Cache nativo Next.js 16 — sem Redis necessário
-    next: { revalidate: revalidateSeconds },
+    // no-store garante dados frescos a cada chamada (cron jobs precisam de dados atuais)
+    cache: "no-store",
   });
 
   if (!res.ok) {
@@ -45,7 +48,9 @@ async function apiFetch<T>(
   return res.json() as Promise<ApiFootballResponse<T>>;
 }
 
-// ─── Normalização ─────────────────────────────────────────────────────────────
+// ============================================================
+// Normalizacao
+// ============================================================
 
 const LIVE_STATUSES = new Set(["1H", "HT", "2H", "ET", "BT", "P", "LIVE"]);
 const FINISHED_STATUSES = new Set(["FT", "AET", "PEN", "AWD", "WO"]);
@@ -81,12 +86,14 @@ export function normalizeFixture(item: ApiFixtureItem): Match {
   };
 }
 
-// ─── Endpoints ────────────────────────────────────────────────────────────────
+// ============================================================
+// Endpoints
+// ============================================================
 
 const ALLOWED_LEAGUES = new Set([
   // Nacionais principais
-  71,  // Brasileirão Série A
-  72,  // Brasileirão Série B
+  71,  // Brasileirao Serie A
+  72,  // Brasileirao Serie B
   39,  // Premier League
   140, // La Liga
   135, // Serie A TIM
@@ -94,7 +101,7 @@ const ALLOWED_LEAGUES = new Set([
   94,  // Liga Portugal
   307, // Saudi Pro League
   253, // MLS
-  // Torneios de Seleções
+  // Torneios de Selecoes
   1,   // Copa do Mundo
   4,   // Eurocopa
   9,   // Copa America
@@ -109,30 +116,29 @@ const ALLOWED_LEAGUES = new Set([
   143, // Copa do Rei
   137, // Coppa Italia
   66,  // Coupe de France
-  96,  // Taça de Portugal
+  96,  // Taca de Portugal
 ]);
 
-/** Partidas ao vivo (cache curto: 60 s) */
+/** Partidas ao vivo (sempre dados frescos) */
 export async function getLiveMatches(): Promise<Match[]> {
-  const data = await apiFetch<ApiFixtureItem>("/fixtures", { live: "all" }, 60);
+  const data = await apiFetch<ApiFixtureItem>("/fixtures", { live: "all" });
   return data.response
     .filter((item) => ALLOWED_LEAGUES.has(item.league.id))
     .map(normalizeFixture);
 }
 
-/** Partidas de uma data (YYYY-MM-DD). Cache 5 min. */
+/** Partidas de uma data (YYYY-MM-DD). Sempre dados frescos. */
 export async function getFixturesByDate(date: string): Promise<Match[]> {
   const data = await apiFetch<ApiFixtureItem>(
     "/fixtures",
-    { date, timezone: "America/Sao_Paulo" },
-    300
+    { date, timezone: "America/Sao_Paulo" }
   );
   return data.response
     .filter((item) => ALLOWED_LEAGUES.has(item.league.id))
     .map(normalizeFixture);
 }
 
-/** Partidas dos próximos N dias (incluindo hoje) */
+/** Partidas dos proximos N dias (incluindo hoje) */
 export async function getUpcomingFixtures(days = 3): Promise<Match[]> {
   const promises = [];
   for (let i = 0; i < days; i++) {
@@ -148,8 +154,7 @@ export async function getUpcomingFixtures(days = 3): Promise<Match[]> {
 export async function getFixtureById(fixtureId: string): Promise<Match | null> {
   const data = await apiFetch<ApiFixtureItem>(
     "/fixtures",
-    { id: fixtureId },
-    60
+    { id: fixtureId }
   );
   const item = data.response[0];
   if (!item) return null;

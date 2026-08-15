@@ -1,18 +1,22 @@
-import type { ApiMmaFight, UfcFight, UfcFightStatus, UfcMethod } from "./types";
+﻿import type { ApiMmaFight, UfcFight, UfcFightStatus, UfcMethod } from "./types";
 
 const BASE_URL = "https://v1.mma.api-sports.io";
 const UFC_ORGANIZATION_ID = 1;
 
+// Ano atual para filtrar lutas — evita trazer historico de anos anteriores
+const CURRENT_SEASON = new Date().getFullYear().toString();
+
 async function mmaFetch<T>(path: string, params: Record<string, string> = {}): Promise<{ response: T }> {
   const key = process.env.API_FOOTBALL_KEY;
-  if (!key) throw new Error("API_FOOTBALL_KEY não configurada");
+  if (!key) throw new Error("API_FOOTBALL_KEY nao configurada");
 
   const url = new URL(path, BASE_URL);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
 
   const res = await fetch(url.toString(), {
     headers: { "x-apisports-key": key },
-    next: { revalidate: 300 },
+    // no-store garante dados frescos a cada chamada (cron jobs precisam de dados atuais)
+    cache: "no-store",
   });
 
   if (!res.ok) throw new Error(`MMA API error: ${res.status} ${res.statusText}`);
@@ -82,12 +86,14 @@ export async function getLiveUfcFights(): Promise<UfcFight[]> {
   return (data.response ?? []).map(normalizeFight).filter(Boolean) as UfcFight[];
 }
 
+/** Busca lutas finalizadas filtrando pelo ano atual para evitar historico excessivo */
 export async function getPastUfcFights(season?: string): Promise<UfcFight[]> {
   const params: Record<string, string> = {
     organization: String(UFC_ORGANIZATION_ID),
     status: "Finished",
+    // Usa temporada passada como parametro ou ano atual — limita o resultado
+    season: season ?? CURRENT_SEASON,
   };
-  if (season) params.season = season;
 
   const data = await mmaFetch<ApiMmaFight[]>("/fights", params);
   return (data.response ?? []).map(normalizeFight).filter(Boolean) as UfcFight[];

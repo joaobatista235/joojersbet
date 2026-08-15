@@ -3,12 +3,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { DashboardShell } from "@/components/DashboardShell";
 import { AuthGuard } from "@/components/AuthGuard";
 
-export const metadata = {
-  title: "Grupos — JoojersBet",
-  description: "Compete com seus amigos em grupos privados.",
-};
-
-export default function GruposLayout({
+export default function AppLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -16,10 +11,7 @@ export default function GruposLayout({
   return (
     <AuthGuard>
       <SidebarProvider>
-        <div
-          className="flex"
-          style={{ backgroundColor: "var(--bg-base)", minHeight: "100vh" }}
-        >
+        <div className="flex" style={{ backgroundColor: "var(--bg-base)", minHeight: "100vh" }}>
           <Sidebar />
           <DashboardShell>{children}</DashboardShell>
         </div>

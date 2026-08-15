@@ -27,18 +27,24 @@ import { isAdmin } from "@/lib/admin";
 const OPEN_W = 256;
 const CLOSED_W = 72;
 
-const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/futebol", label: "Futebol", icon: Zap },
-  { href: "/cs2", label: "Counter-Strike 2", icon: Gamepad2 },
-  { href: "/ufc", label: "UFC", icon: Swords },
-  { href: "/ao-vivo", label: "Ao vivo", icon: Radio },
-  { href: "/apostas", label: "Apostas", icon: Shuffle },
-  { href: "/rankings", label: "Rankings", icon: BarChart2 },
-  { href: "/grupos", label: "Grupos", icon: Users },
-  { href: "/perfil", label: "Perfil", icon: User },
-  { href: "/configuracoes", label: "Configurações", icon: Settings },
-];
+const navGroups = {
+  "Principal": [
+    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/rankings", label: "Rankings", icon: BarChart2 },
+    { href: "/grupos", label: "Grupos", icon: Users },
+  ],
+  "Jogos": [
+    { href: "/futebol", label: "Futebol", icon: Zap },
+    { href: "/cs2", label: "Counter-Strike 2", icon: Gamepad2 },
+    { href: "/ufc", label: "UFC", icon: Swords },
+    { href: "/ao-vivo", label: "Ao vivo", icon: Radio },
+    { href: "/apostas", label: "Apostas", icon: Shuffle },
+  ],
+  "Minha Conta": [
+    { href: "/perfil", label: "Perfil", icon: User },
+    { href: "/configuracoes", label: "Configurações", icon: Settings },
+  ]
+};
 
 const comingSoon: { label: string; icon: React.ElementType }[] = [];
 
@@ -173,62 +179,88 @@ export function Sidebar() {
         className="flex-1 overflow-y-auto overflow-x-hidden py-4"
         style={{ display: "flex", flexDirection: "column", gap: 4, padding: "20px 12px" }}
       >
-        {navItems.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || pathname.startsWith(href + "/");
-          return (
-            <Link
-              key={href}
-              href={href}
-              title={!isOpen ? label : undefined}
-              style={{
-                textDecoration: "none",
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                padding: "11px 12px",
-                borderRadius: 10,
-                backgroundColor: active ? "var(--orange-glow)" : "transparent",
-                color: active ? "var(--orange-400)" : "var(--text-secondary)",
-                borderLeft: active ? "2px solid var(--orange-500)" : "2px solid transparent",
-                transition: "background-color 0.15s ease, color 0.15s ease",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                minWidth: 0,
-              }}
-              onMouseEnter={(e) => {
-                if (!active) {
-                  (e.currentTarget as HTMLElement).style.backgroundColor = "var(--bg-elevated)";
-                  (e.currentTarget as HTMLElement).style.color = "var(--text-primary)";
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!active) {
-                  (e.currentTarget as HTMLElement).style.backgroundColor = "transparent";
-                  (e.currentTarget as HTMLElement).style.color = "var(--text-secondary)";
-                }
-              }}
-            >
-              <Icon
-                size={19}
-                strokeWidth={active ? 2.5 : 1.8}
-                style={{ flexShrink: 0 }}
-              />
-              <AnimatePresence>
-                {isOpen && (
-                  <motion.span
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.15 }}
-                    style={{ fontSize: 14, fontWeight: active ? 600 : 500 }}
+        {Object.entries(navGroups).map(([groupName, items]) => (
+          <div key={groupName} style={{ marginBottom: 12 }}>
+            <AnimatePresence>
+              {isOpen && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: "var(--text-muted)",
+                    textTransform: "uppercase",
+                    letterSpacing: 0.5,
+                    padding: "0 12px 6px",
+                  }}
+                >
+                  {groupName}
+                </motion.div>
+              )}
+            </AnimatePresence>
+            
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {items.map(({ href, label, icon: Icon }) => {
+                const active = pathname === href || pathname.startsWith(href + "/");
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    title={!isOpen ? label : undefined}
+                    style={{
+                      textDecoration: "none",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                      padding: "11px 12px",
+                      borderRadius: 10,
+                      backgroundColor: active ? "var(--orange-glow)" : "transparent",
+                      color: active ? "var(--orange-400)" : "var(--text-secondary)",
+                      borderLeft: active ? "2px solid var(--orange-500)" : "2px solid transparent",
+                      transition: "background-color 0.15s ease, color 0.15s ease",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      minWidth: 0,
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!active) {
+                        (e.currentTarget as HTMLElement).style.backgroundColor = "var(--bg-elevated)";
+                        (e.currentTarget as HTMLElement).style.color = "var(--text-primary)";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!active) {
+                        (e.currentTarget as HTMLElement).style.backgroundColor = "transparent";
+                        (e.currentTarget as HTMLElement).style.color = "var(--text-secondary)";
+                      }
+                    }}
                   >
-                    {label}
-                  </motion.span>
-                )}
-              </AnimatePresence>
-            </Link>
-          );
-        })}
+                    <Icon
+                      size={19}
+                      strokeWidth={active ? 2.5 : 1.8}
+                      style={{ flexShrink: 0 }}
+                    />
+                    <AnimatePresence>
+                      {isOpen && (
+                        <motion.span
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.15 }}
+                          style={{ fontSize: 14, fontWeight: active ? 600 : 500 }}
+                        >
+                          {label}
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
 
         {/* Divider */}
         <div

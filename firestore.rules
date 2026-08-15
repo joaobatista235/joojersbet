@@ -49,5 +49,78 @@ service cloud.firestore {
       // Temporário: Permitir write para API route e cliente (join group)
       allow write: if request.auth != null || true; 
     }
+    match /seasons/{seasonId} {
+      allow read: if request.auth != null;
+    }
+
+    match /seasonScores/{seasonId}/users/{userId} {
+      allow read: if request.auth != null;
+    }
+    
+    // ==========================================
+    // MODULE: CS2
+    // ==========================================
+    match /cs2Matches/{matchId} {
+      allow read: if request.auth != null;
+    }
+    
+    match /cs2Predictions/{predId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+    
+    match /cs2PredictionResults/{resultId} {
+      allow read: if request.auth != null;
+    }
+    
+    match /cs2UserScores/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // ==========================================
+    // MODULE: UFC
+    // ==========================================
+    match /ufcFights/{fightId} {
+      allow read: if request.auth != null;
+    }
+    
+    match /ufcPredictions/{predId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+    
+    match /ufcPredictionResults/{resultId} {
+      allow read: if request.auth != null;
+    }
+    
+    match /ufcUserScores/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // ==========================================
+    // MODULE: CUSTOM BETS (Apostas)
+    // ==========================================
+    match /customEvents/{eventId} {
+      allow read: if request.auth != null;
+    }
+    
+    match /customPredictions/{predId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+    
+    match /customPredictionResults/{resultId} {
+      allow read: if request.auth != null;
+    }
+    
+    match /customUserScores/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
   }
 }
