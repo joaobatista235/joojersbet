@@ -31,6 +31,7 @@ export function UfcAllPredictionsModal({ match, onClose }: { match: UfcFight; on
 
         const enriched = await Promise.all(
           predsData.map(async (p) => {
+            if (!db) return null;
             const userSnap = await getDoc(doc(db, "userScores", p.userId));
             const userData = userSnap.exists() ? userSnap.data() : null;
             return {
@@ -44,8 +45,9 @@ export function UfcAllPredictionsModal({ match, onClose }: { match: UfcFight; on
             };
           })
         );
-        enriched.sort((a, b) => (a.userId === user?.uid ? -1 : b.userId === user?.uid ? 1 : 0));
-        setPredictions(enriched);
+        const validEnriched = enriched.filter(e => e !== null);
+        validEnriched.sort((a, b) => (a.userId === user?.uid ? -1 : b.userId === user?.uid ? 1 : 0));
+        setPredictions(validEnriched as any);
       } catch (err) {
         console.error(err);
       } finally {
