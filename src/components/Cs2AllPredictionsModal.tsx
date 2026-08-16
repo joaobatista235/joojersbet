@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { X } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
-import type { Cs2Match } from "@/lib/api-cs2/types";
+import type { Cs2Match } from "@/lib/pandascore/types";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface EnrichedPrediction {
