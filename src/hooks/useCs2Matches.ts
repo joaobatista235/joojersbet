@@ -43,6 +43,12 @@ export function useCs2Matches(status: Cs2MatchStatus, maxResults = 20): UseCs2Ma
           return status === "FINISHED" ? tB - tA : tA - tB;
         });
 
+        // Sort no lado do cliente
+        data.sort((a, b) => {
+          const tA = new Date(a.startTime).getTime();
+          const tB = new Date(b.startTime).getTime();
+          return status === "FINISHED" ? tB - tA : tA - tB;
+        });
         setMatches(data);
         setLoading(false);
       }, (err) => {

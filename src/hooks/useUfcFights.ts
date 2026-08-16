@@ -17,7 +17,7 @@ export function useUfcFights(status: UfcFightStatus, maxResults = 30) {
       const q = query(
         collection(db, "ufcFights"),
         where("status", "==", status),
-        orderBy("startTime", status === "FINISHED" ? "desc" : "asc"),
+        // orderBy removido para evitar erro de indice composto. A ordenacao é feita no JS
         limit(maxResults)
       );
       unsubscribe = onSnapshot(q, (snap) => {
@@ -26,6 +26,12 @@ export function useUfcFights(status: UfcFightStatus, maxResults = 30) {
           const cutoff = Date.now() - 3 * 60 * 60 * 1000;
           data = data.filter((f) => new Date(f.startTime).getTime() > cutoff);
         }
+        // Sort no lado do cliente
+        data.sort((a, b) => {
+          const tA = new Date(a.startTime).getTime();
+          const tB = new Date(b.startTime).getTime();
+          return status === "FINISHED" ? tB - tA : tA - tB;
+        });
         setFights(data);
         setLoading(false);
       }, (err) => { setError(err.message); setLoading(false); });

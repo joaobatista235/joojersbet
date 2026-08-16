@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { UfcAllPredictionsModal } from "@/components/UfcAllPredictionsModal";
 import { Activity, Calendar, CheckCircle2, Swords } from "lucide-react";
 import { useUfcFights } from "@/hooks/useUfcFights";
 import { useUfcPredictions } from "@/hooks/useUfcPredictions";
@@ -43,6 +44,7 @@ function UfcFightCard({ fight }: { fight: UfcFight }) {
   const [selectedFighterId, setSelectedFighterId] = useState<number | null>(existing?.predFighterId ?? null);
   const [selectedMethod, setSelectedMethod] = useState<UfcMethod | null>(existing?.predMethod ?? null);
   const [saving, setSaving] = useState(false);
+  const [showAll, setShowAll] = useState(false);
   const [saved, setSaved] = useState(false);
 
   const statusColor = fight.status === "LIVE" ? "#ef4444" : fight.status === "FINISHED" ? "var(--text-muted)" : "var(--orange-400)";

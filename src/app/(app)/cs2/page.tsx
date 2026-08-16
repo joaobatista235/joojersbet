@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Cs2AllPredictionsModal } from "@/components/Cs2AllPredictionsModal";
 import { Activity, Calendar, CheckCircle2, Gamepad2 } from "lucide-react";
 import { useCs2Matches } from "@/hooks/useCs2Matches";
 import { useCs2Predictions } from "@/hooks/useCs2Predictions";
@@ -57,6 +58,7 @@ function Cs2MatchCard({ match }: { match: Cs2Match }) {
   const [score1, setScore1] = useState(existing?.predTeam1Score ?? maxMaps);
   const [score2, setScore2] = useState(existing?.predTeam2Score ?? 0);
   const [saving, setSaving] = useState(false);
+  const [showAll, setShowAll] = useState(false);
   const [saved, setSaved] = useState(false);
 
   const hasPredicted = !!existing;
@@ -95,7 +97,7 @@ function Cs2MatchCard({ match }: { match: Cs2Match }) {
       <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 12 }}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
           <TeamLogo src={match.team1Logo} name={match.team1} size={48} />
-          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", textAlign: "center" }}>{match.team1}</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", textAlign: "center", minHeight: 40, display: "flex", alignItems: "center", justifyContent: "center" }}>{match.team1}</div>
         </div>
         <div style={{ textAlign: "center" }}>
           {isFinished || match.status === "LIVE" ? (
@@ -108,7 +110,7 @@ function Cs2MatchCard({ match }: { match: Cs2Match }) {
         </div>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
           <TeamLogo src={match.team2Logo} name={match.team2} size={48} />
-          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", textAlign: "center" }}>{match.team2}</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", textAlign: "center", minHeight: 40, display: "flex", alignItems: "center", justifyContent: "center" }}>{match.team2}</div>
         </div>
       </div>
 
@@ -162,8 +164,13 @@ function Cs2MatchCard({ match }: { match: Cs2Match }) {
           <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
             Palpite: {existing.predTeamId === match.team1Id ? match.team1 : match.team2} · {existing.predTeam1Score}×{existing.predTeam2Score}
           </span>
+          <button onClick={() => setShowAll(true)} style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, color: "var(--orange-500)", background: "var(--orange-glow)", border: "none", padding: "4px 8px", borderRadius: 6, cursor: "pointer" }}>Ver todos</button>
         </div>
       )}
+
+      <AnimatePresence>
+        {showAll && <Cs2AllPredictionsModal match={match} onClose={() => setShowAll(false)} />}
+      </AnimatePresence>
     </motion.div>
   );
 }
