@@ -5,11 +5,25 @@ import { ADMIN_UID } from "@/lib/admin";
 
 const EXPECTED_SECRET = process.env.SYNC_SECRET ?? "dev";
 
-function auth(request: NextRequest): boolean {
+import { adminAuth } from "@/lib/firebase-admin";
+
+async function auth(request: NextRequest): Promise<boolean> {
   const secret = request.headers.get("x-sync-secret") ?? request.nextUrl.searchParams.get("secret") ?? "";
-  const uid = request.headers.get("x-admin-uid") ?? "";
-  return secret === EXPECTED_SECRET && uid === ADMIN_UID;
+  if (secret === EXPECTED_SECRET && EXPECTED_SECRET !== "dev") return true;
+
+  const authHeader = request.headers.get("Authorization");
+  if (authHeader?.startsWith("Bearer ")) {
+    const token = authHeader.split("Bearer ")[1];
+    try {
+      const decoded = await adminAuth.verifyIdToken(token);
+      return decoded.uid === ADMIN_UID;
+    } catch {
+      return false;
+    }
+  }
+  return false;
 }
+
 
 export async function GET(request: NextRequest) {
   if (!auth(request)) return Response.json({ error: "Unauthorized" }, { status: 401 });

@@ -57,8 +57,7 @@ function AdminPanel() {
       method,
       headers: {
         "Content-Type": "application/json",
-        "x-sync-secret": process.env.NEXT_PUBLIC_SYNC_SECRET ?? "",
-        "x-admin-uid": user?.uid ?? "",
+        "Authorization": `Bearer ${await user?.getIdToken()}`,
       },
       body: body ? JSON.stringify(body) : undefined,
     });
