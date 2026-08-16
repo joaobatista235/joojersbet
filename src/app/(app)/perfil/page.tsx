@@ -214,62 +214,169 @@ export default function PerfilPage() {
         </div>
       </div>
 
-      {/* Meus Palpites */}
+      {/* Meus Palpites - Filtrado pela tab ativa */}
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} style={{ marginTop: 32 }}>
         <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", marginBottom: 16 }}>
           Meus Palpites (Próximos e Ao Vivo)
         </h2>
-        <div className="card" style={{ padding: 16 }}>
-          {myMatches.length === 0 && myCs2Matches.length === 0 && myUfcFights.length === 0 ? (
-            <div style={{ textAlign: "center", padding: 32, color: "var(--text-muted)", fontSize: 14 }}>
-              Você não possui palpites ativos no momento.
+
+        {/* Sub-tabs de futebol (ligas) */}
+        {category === "futebol" && (
+          <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 12, marginBottom: 0 }}>
+            {[
+              { id: "geral", label: "Todas as Ligas" },
+              { id: "39", label: "Premier League" },
+              { id: "71", label: "Brasileiroão" },
+              { id: "135", label: "Serie A" },
+              { id: "140", label: "La Liga" }
+            ].map(l => (
+              <button key={l.id} onClick={() => setLeagueId(l.id)} style={{
+                padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 600, whiteSpace: "nowrap",
+                backgroundColor: leagueId === l.id ? "var(--orange-500)" : "var(--bg-elevated)",
+                color: leagueId === l.id ? "white" : "var(--text-muted)",
+                border: leagueId === l.id ? "1px solid var(--orange-500)" : "1px solid var(--border-subtle)",
+                cursor: "pointer", transition: "all 0.15s",
+              }}>{l.label}</button>
+            ))}
+          </div>
+        )}
+
+        {/* Sub-tabs de CS2 (torneios presentes nos palpites) */}
+        {category === "cs2" && (() => {
+          const cs2Tournaments = Array.from(new Set(myCs2Matches.map(m => m.tournament).filter(Boolean)));
+          return cs2Tournaments.length > 1 ? (
+            <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 12, marginBottom: 0 }}>
+              {["Todos", ...cs2Tournaments].map(t => (
+                <button key={t} onClick={() => setLeagueId(t === "Todos" ? "geral" : t)} style={{
+                  padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 600, whiteSpace: "nowrap",
+                  backgroundColor: (t === "Todos" ? leagueId === "geral" : leagueId === t) ? "var(--orange-500)" : "var(--bg-elevated)",
+                  color: (t === "Todos" ? leagueId === "geral" : leagueId === t) ? "white" : "var(--text-muted)",
+                  border: (t === "Todos" ? leagueId === "geral" : leagueId === t) ? "1px solid var(--orange-500)" : "1px solid var(--border-subtle)",
+                  cursor: "pointer", transition: "all 0.15s",
+                }}>{t}</button>
+              ))}
             </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              {myCs2Matches.map((m) => (
-                  <div key={m.id} style={{ padding: "12px 0", borderBottom: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>{m.team1} vs {m.team2}</div>
-                      <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>CS2 • {m.tournament}</div>
-                    </div>
-                    <div style={{ fontSize: 12, color: "var(--orange-400)", fontWeight: 700 }}>
-                      {byCs2Match.get(m.id)?.predTeam1Score} - {byCs2Match.get(m.id)?.predTeam2Score}
-                    </div>
-                  </div>
-                ))}
-                {myUfcFights.map((f) => (
-                  <div key={f.id} style={{ padding: "12px 0", borderBottom: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>{f.fighter1} vs {f.fighter2}</div>
-                      <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>UFC • {f.weightClass}</div>
-                    </div>
-                    <div style={{ fontSize: 12, color: "var(--orange-400)", fontWeight: 700 }}>
-                      {f.fighter1Id === byFight.get(f.id)?.predFighterId ? f.fighter1 : f.fighter2}
-                    </div>
-                  </div>
-                ))}
-                {myMatches.map((m, i) => {
-                const time = new Date(m.startTime).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-                return (
-                  <UpcomingMatchRow
-                    key={m.id}
-                    match={{
-                      id: m.id,
-                      homeTeam: m.homeTeam,
-                      awayTeam: m.awayTeam,
-                      time,
-                      competition: m.competition,
-                      group: m.round,
-                      prediction: byMatch.get(m.id) ?? null,
-                      onPredict: () => setSelectedMatch(m),
-                      onViewAllPredictions: () => setSelectedMatchForAll(m),
-                    }}
-                    delay={0.1 * i}
-                  />
-                );
-              })}
+          ) : null;
+        })()}
+
+        {/* Sub-tabs de UFC (categorias de peso presentes nos palpites) */}
+        {category === "ufc" && (() => {
+          const classes = Array.from(new Set(myUfcFights.map(f => f.weightClass).filter(Boolean)));
+          return classes.length > 1 ? (
+            <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 12, marginBottom: 0 }}>
+              {["Todas", ...classes].map(c => (
+                <button key={c} onClick={() => setLeagueId(c === "Todas" ? "geral" : c)} style={{
+                  padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 600, whiteSpace: "nowrap",
+                  backgroundColor: (c === "Todas" ? leagueId === "geral" : leagueId === c) ? "var(--orange-500)" : "var(--bg-elevated)",
+                  color: (c === "Todas" ? leagueId === "geral" : leagueId === c) ? "white" : "var(--text-muted)",
+                  border: (c === "Todas" ? leagueId === "geral" : leagueId === c) ? "1px solid var(--orange-500)" : "1px solid var(--border-subtle)",
+                  cursor: "pointer", transition: "all 0.15s",
+                }}>{c}</button>
+              ))}
             </div>
-          )}
+          ) : null;
+        })()}
+
+        <div className="card" style={{ padding: 16, marginTop: 12 }}>
+          {/* ─ FUTEBOL ─ */}
+          {category === "futebol" && (() => {
+            const filtered = myMatches.filter(m =>
+              leagueId === "geral" || String(m.leagueId) === leagueId
+            );
+            return filtered.length === 0 ? (
+              <div style={{ textAlign: "center", padding: 32, color: "var(--text-muted)", fontSize: 14 }}>
+                Nenhum palpite nessa liga.
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                {filtered.map((m, i) => {
+                  const time = new Date(m.startTime).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+                  return (
+                    <UpcomingMatchRow
+                      key={m.id}
+                      match={{
+                        id: m.id,
+                        homeTeam: m.homeTeam,
+                        awayTeam: m.awayTeam,
+                        time,
+                        competition: m.competition,
+                        group: m.round,
+                        prediction: byMatch.get(m.id) ?? null,
+                        onPredict: () => setSelectedMatch(m),
+                        onViewAllPredictions: () => setSelectedMatchForAll(m),
+                      }}
+                      delay={0.1 * i}
+                    />
+                  );
+                })}
+              </div>
+            );
+          })()}
+
+          {/* ─ CS2 ─ */}
+          {category === "cs2" && (() => {
+            const filtered = myCs2Matches.filter(m =>
+              leagueId === "geral" || m.tournament === leagueId
+            );
+            return filtered.length === 0 ? (
+              <div style={{ textAlign: "center", padding: 32, color: "var(--text-muted)", fontSize: 14 }}>
+                Nenhum palpite de CS2 ativo.
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                {filtered.map((m) => {
+                  const pred = byCs2Match.get(m.id);
+                  return (
+                    <div key={m.id} style={{ padding: "14px 0", borderBottom: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 2 }}>{m.team1} <span style={{ color: "var(--text-muted)", fontWeight: 500 }}>vs</span> {m.team2}</div>
+                        <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{m.tournament} • {m.status === "LIVE" ? "🔴 Ao Vivo" : new Date(m.startTime).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</div>
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2, flexShrink: 0 }}>
+                        <div style={{ fontSize: 15, fontWeight: 800, color: "var(--orange-400)", letterSpacing: 1 }}>
+                          {pred?.predTeam1Score ?? "-"} <span style={{ color: "var(--text-muted)", fontSize: 12 }}>-</span> {pred?.predTeam2Score ?? "-"}
+                        </div>
+                        <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>
+                          {pred && (pred.predTeam1Score ?? 0) > (pred.predTeam2Score ?? 0) ? m.team1 : pred && (pred.predTeam2Score ?? 0) > (pred.predTeam1Score ?? 0) ? m.team2 : ""}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+
+          {/* ─ UFC ─ */}
+          {category === "ufc" && (() => {
+            const filtered = myUfcFights.filter(f =>
+              leagueId === "geral" || f.weightClass === leagueId
+            );
+            return filtered.length === 0 ? (
+              <div style={{ textAlign: "center", padding: 32, color: "var(--text-muted)", fontSize: 14 }}>
+                Nenhum palpite de UFC ativo.
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                {filtered.map((f) => {
+                  const pred = byFight.get(f.id);
+                  const pickedFighter = pred?.predFighterId === f.fighter1Id ? f.fighter1 : f.fighter2;
+                  return (
+                    <div key={f.id} style={{ padding: "14px 0", borderBottom: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 2 }}>{f.fighter1} <span style={{ color: "var(--text-muted)", fontWeight: 500 }}>vs</span> {f.fighter2}</div>
+                        <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{f.weightClass} • {f.status === "LIVE" ? "🔴 Ao Vivo" : new Date(f.startTime).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</div>
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2, flexShrink: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: "var(--orange-400)" }}>{pickedFighter}</div>
+                        {pred?.predMethod && <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{pred.predMethod}</div>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
       </motion.div>
 
