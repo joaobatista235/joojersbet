@@ -39,7 +39,8 @@ function UfcFightCard({ fight }: { fight: UfcFight }) {
   const existing = byFight.get(fight.id);
   const isLocked = existing?.locked ?? false;
   const isFinished = fight.status === "FINISHED";
-  const canPredict = !isLocked && !isFinished;
+  const hasPredicted = !!existing;
+  const canPredict = !hasPredicted && !isLocked && !isFinished;
 
   const [selectedFighterId, setSelectedFighterId] = useState<number | null>(existing?.predFighterId ?? null);
   const [selectedMethod, setSelectedMethod] = useState<UfcMethod | null>(existing?.predMethod ?? null);

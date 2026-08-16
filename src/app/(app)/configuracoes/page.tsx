@@ -19,7 +19,7 @@ interface Season {
 }
 
 function AdminPanel() {
-  const { user } = useAuth();
+  const { user, firebaseUser } = useAuth();
   const { events } = useCustomEvents();
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [loadingSeasons, setLoadingSeasons] = useState(true);
@@ -57,7 +57,7 @@ function AdminPanel() {
       method,
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${await user?.getIdToken()}`,
+        "Authorization": `Bearer ${await firebaseUser?.getIdToken()}`,
       },
       body: body ? JSON.stringify(body) : undefined,
     });

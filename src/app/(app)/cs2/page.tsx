@@ -55,14 +55,14 @@ function Cs2MatchCard({ match }: { match: Cs2Match }) {
   const maxMaps = Math.ceil(match.bestOf / 2);
 
   // Winner is derived from scores - no separate selector needed
-  const [score1, setScore1] = useState(existing?.predTeam1Score ?? maxMaps);
+  const [score1, setScore1] = useState(existing?.predTeam1Score ?? 0);
   const [score2, setScore2] = useState(existing?.predTeam2Score ?? 0);
   const [saving, setSaving] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [saved, setSaved] = useState(false);
 
   const hasPredicted = !!existing;
-  const canPredict = !isLocked && !isFinished;
+  const canPredict = !hasPredicted && !isLocked && !isFinished;
 
   async function handleSave() {
     const selectedTeamId = score1 > score2 ? match.team1Id : score1 < score2 ? match.team2Id : null;

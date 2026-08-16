@@ -6,6 +6,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useUserScore } from "@/hooks/useUserScore";
 import { useMatches } from "@/hooks/useMatches";
 import { usePredictions } from "@/hooks/usePredictions";
+import { useCs2Matches } from "@/hooks/useCs2Matches";
+import { useCs2Predictions } from "@/hooks/useCs2Predictions";
+import { useUfcFights } from "@/hooks/useUfcFights";
+import { useUfcPredictions } from "@/hooks/useUfcPredictions";
 import { UpcomingMatchRow } from "@/components/UpcomingMatchRow";
 import { PredictionModal } from "@/components/PredictionModal";
 import { AllPredictionsModal } from "@/components/AllPredictionsModal";
@@ -27,9 +31,25 @@ export default function PerfilPage() {
   const { matches: live } = useMatches("LIVE", 50);
   const { byMatch } = usePredictions();
 
+  const { matches: cs2Upcoming } = useCs2Matches("UPCOMING", 50);
+  const { matches: cs2Live } = useCs2Matches("LIVE", 20);
+  const { byMatch: byCs2Match } = useCs2Predictions();
+
+  const { fights: ufcUpcoming } = useUfcFights("UPCOMING", 50);
+  const { fights: ufcLive } = useUfcFights("LIVE", 20);
+  const { byFight } = useUfcPredictions();
+
   const myMatches = useMemo(() => {
     return [...live, ...upcoming].filter((m) => byMatch.has(m.id));
   }, [live, upcoming, byMatch]);
+
+  const myCs2Matches = useMemo(() => {
+    return [...cs2Live, ...cs2Upcoming].filter((m) => byCs2Match.has(m.id));
+  }, [cs2Live, cs2Upcoming, byCs2Match]);
+
+  const myUfcFights = useMemo(() => {
+    return [...ufcLive, ...ufcUpcoming].filter((f) => byFight.has(f.id));
+  }, [ufcLive, ufcUpcoming, byFight]);
 
   if (!user) return null;
 
@@ -93,19 +113,32 @@ export default function PerfilPage() {
               Futebol
             </button>
             <button
-              disabled
+              onClick={() => { setCategory("cs2"); setLeagueId("geral"); }}
               style={{
                 padding: "8px 16px",
                 borderRadius: 8,
-                backgroundColor: "var(--bg-elevated)",
-                color: "var(--text-muted)",
+                backgroundColor: category === "cs2" ? "var(--orange-500)" : "var(--bg-elevated)",
+                color: category === "cs2" ? "white" : "var(--text-primary)",
                 fontWeight: 600,
                 border: "none",
-                cursor: "not-allowed",
-                opacity: 0.5
+                cursor: "pointer",
               }}
             >
-              CS2 (Em breve)
+              CS2
+            </button>
+            <button
+              onClick={() => { setCategory("ufc"); setLeagueId("geral"); }}
+              style={{
+                padding: "8px 16px",
+                borderRadius: 8,
+                backgroundColor: category === "ufc" ? "var(--orange-500)" : "var(--bg-elevated)",
+                color: category === "ufc" ? "white" : "var(--text-primary)",
+                fontWeight: 600,
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              UFC
             </button>
           </div>
 
@@ -187,13 +220,35 @@ export default function PerfilPage() {
           Meus Palpites (Próximos e Ao Vivo)
         </h2>
         <div className="card" style={{ padding: 16 }}>
-          {myMatches.length === 0 ? (
+          {myMatches.length === 0 && myCs2Matches.length === 0 && myUfcFights.length === 0 ? (
             <div style={{ textAlign: "center", padding: 32, color: "var(--text-muted)", fontSize: 14 }}>
               Você não possui palpites ativos no momento.
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column" }}>
-              {myMatches.map((m, i) => {
+              {myCs2Matches.map((m) => (
+                  <div key={m.id} style={{ padding: "12px 0", borderBottom: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>{m.team1} vs {m.team2}</div>
+                      <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>CS2 • {m.tournament}</div>
+                    </div>
+                    <div style={{ fontSize: 12, color: "var(--orange-400)", fontWeight: 700 }}>
+                      {byCs2Match.get(m.id)?.predTeam1Score} - {byCs2Match.get(m.id)?.predTeam2Score}
+                    </div>
+                  </div>
+                ))}
+                {myUfcFights.map((f) => (
+                  <div key={f.id} style={{ padding: "12px 0", borderBottom: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>{f.fighter1} vs {f.fighter2}</div>
+                      <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>UFC • {f.weightClass}</div>
+                    </div>
+                    <div style={{ fontSize: 12, color: "var(--orange-400)", fontWeight: 700 }}>
+                      {f.fighter1Id === byFight.get(f.id)?.predFighterId ? f.fighter1 : f.fighter2}
+                    </div>
+                  </div>
+                ))}
+                {myMatches.map((m, i) => {
                 const time = new Date(m.startTime).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
                 return (
                   <UpcomingMatchRow
