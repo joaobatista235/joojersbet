@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "sync:prod": "curl \"https://joojersbet.vercel.app/api/score/process?secret=senha-muito-boa\"",
+    "sync:local": "curl http://localhost:3000/api/score/process?secret=senha-muito-boa",
+    "sync": "curl \"http://localhost:3000/api/score/process?secret=senha-muito-boa\""
   },
   "dependencies": {
     "clsx": "^2.1.1",
