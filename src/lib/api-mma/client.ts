@@ -4,7 +4,9 @@ const BASE_URL = "https://v1.mma.api-sports.io";
 const UFC_ORGANIZATION_ID = 1;
 
 // Ano atual para filtrar lutas — evita trazer historico de anos anteriores
-const CURRENT_SEASON = new Date().getFullYear().toString();
+// Free plan da api-sports.io somente suporta ate 2024
+// Atualizar quando o plano for upgraded
+const CURRENT_SEASON = "2024";
 
 async function mmaFetch<T>(path: string, params: Record<string, string> = {}): Promise<{ response: T }> {
   const key = process.env.API_FOOTBALL_KEY;
@@ -71,6 +73,7 @@ function normalizeFight(fight: ApiMmaFight): UfcFight | null {
 }
 
 export async function getUpcomingUfcFights(): Promise<UfcFight[]> {
+  // Sem season = busca todos os scheduled (ignora restrição de ano)
   const data = await mmaFetch<ApiMmaFight[]>("/fights", {
     organization: String(UFC_ORGANIZATION_ID),
     status: "Scheduled",

@@ -53,7 +53,7 @@ function Cs2MatchCard({ match }: { match: Cs2Match }) {
 
   const maxMaps = Math.ceil(match.bestOf / 2);
 
-  const [selectedTeamId, setSelectedTeamId] = useState<number | null>(existing?.predTeamId ?? null);
+  // Winner is derived from scores - no separate selector needed
   const [score1, setScore1] = useState(existing?.predTeam1Score ?? maxMaps);
   const [score2, setScore2] = useState(existing?.predTeam2Score ?? 0);
   const [saving, setSaving] = useState(false);
@@ -63,6 +63,7 @@ function Cs2MatchCard({ match }: { match: Cs2Match }) {
   const canPredict = !isLocked && !isFinished;
 
   async function handleSave() {
+    const selectedTeamId = score1 > score2 ? match.team1Id : score1 < score2 ? match.team2Id : null;
     if (!selectedTeamId || saving) return;
     setSaving(true);
     try {
@@ -115,35 +116,40 @@ function Cs2MatchCard({ match }: { match: Cs2Match }) {
         <div style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: 16, display: "flex", flexDirection: "column", gap: 12 }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-muted)", textAlign: "center" }}>Seu Palpite</div>
 
-          <div style={{ display: "flex", gap: 8 }}>
-            {[match.team1Id, match.team2Id].map((teamId, idx) => {
-              const name = idx === 0 ? match.team1 : match.team2;
-              const logo = idx === 0 ? match.team1Logo : match.team2Logo;
-              const isSelected = selectedTeamId === teamId;
-              return (
-                <button key={teamId} onClick={() => setSelectedTeamId(teamId)} style={{
-                  flex: 1, padding: "10px 8px", borderRadius: 10, border: `1px solid ${isSelected ? "var(--orange-500)" : "var(--border-subtle)"}`,
-                  background: isSelected ? "var(--orange-glow)" : "var(--bg-elevated)",
-                  cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, transition: "all 0.15s",
-                }}>
-                  <TeamLogo src={logo} name={name} size={28} />
-                  <span style={{ fontSize: 11, fontWeight: 600, color: isSelected ? "var(--orange-400)" : "var(--text-secondary)" }}>{name}</span>
-                </button>
-              );
-            })}
-          </div>
+          {score1 !== score2 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 8,
+              background: "var(--orange-glow)", border: "1px solid var(--orange-500)" }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "var(--orange-400)" }}>
+                Vencedor: {score1 > score2 ? match.team1 : match.team2}
+              </span>
+            </div>
+          )}
+          {score1 === score2 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 8,
+              background: "var(--bg-elevated)", border: "1px solid var(--border-subtle)" }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)" }}>
+                Defina o placar de mapas para indicar o vencedor
+              </span>
+            </div>
+          )}
 
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16 }}>
-            <MapScoreInput value={score1} onChange={setScore1} max={match.bestOf} />
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+              <span style={{ fontSize: 10, fontWeight: 600, color: "var(--text-muted)" }}>{match.team1}</span>
+              <MapScoreInput value={score1} onChange={(v) => { setScore1(v); }} max={match.bestOf} />
+            </div>
             <span style={{ fontSize: 14, color: "var(--text-muted)", fontWeight: 700 }}>×</span>
-            <MapScoreInput value={score2} onChange={setScore2} max={match.bestOf} />
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+              <span style={{ fontSize: 10, fontWeight: 600, color: "var(--text-muted)" }}>{match.team2}</span>
+              <MapScoreInput value={score2} onChange={(v) => { setScore2(v); }} max={match.bestOf} />
+            </div>
           </div>
 
-          <button onClick={handleSave} disabled={!selectedTeamId || saving}
+          <button onClick={handleSave} disabled={score1 === score2 || saving}
             style={{
-              padding: "10px 0", borderRadius: 10, border: "none", cursor: selectedTeamId ? "pointer" : "not-allowed",
+              padding: "10px 0", borderRadius: 10, border: "none", cursor: score1 !== score2 ? "pointer" : "not-allowed",
               background: saved ? "var(--color-success, #22c55e)" : "var(--orange-500)",
-              color: "white", fontWeight: 700, fontSize: 13, opacity: selectedTeamId ? 1 : 0.5, transition: "all 0.15s",
+              color: "white", fontWeight: 700, fontSize: 13, opacity: score1 !== score2 ? 1 : 0.5, transition: "all 0.15s",
             }}>
             {saved ? "✓ Palpite salvo!" : saving ? "Salvando..." : hasPredicted ? "Atualizar palpite" : "Confirmar palpite"}
           </button>
