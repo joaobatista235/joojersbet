@@ -77,18 +77,18 @@ async function syncUserToFirestore(fbUser: User): Promise<UserProfile> {
     }
   }
 
-  // Desnormalizar nome/foto em userScores para exibição nos rankings de grupo
-  const scoreRef = doc(db, "userScores", fbUser.uid);
-  await setDoc(
-    scoreRef,
-    {
-      name: profile.name,
-      initials: profile.initials,
-      photoURL: profile.photoURL || null,
-      city: profile.city ?? null,
-    },
-    { merge: true }
-  );
+    // Desnormalizar nome/foto em todos os collections de score para rankings
+  const scoreData = {
+    name: profile.name,
+    initials: profile.initials,
+    photoURL: profile.photoURL || null,
+    city: profile.city ?? null,
+  };
+  await Promise.all([
+    setDoc(doc(db, "userScores", fbUser.uid), scoreData, { merge: true }),
+    setDoc(doc(db, "ufcUserScores", fbUser.uid), scoreData, { merge: true }),
+    setDoc(doc(db, "cs2UserScores", fbUser.uid), scoreData, { merge: true }),
+  ]);
 
   return profile;
 }
