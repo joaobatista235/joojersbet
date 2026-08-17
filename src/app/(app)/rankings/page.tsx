@@ -6,7 +6,7 @@ import { Target, Trophy, Medal, Award, TrendingUp } from "lucide-react";
 import { useRanking, type RankingEntry } from "@/hooks/useRanking";
 import { useAuth } from "@/contexts/AuthContext";
 import { db } from "@/lib/firebase";
-import { collection, query, orderBy, limit, onSnapshot } from "firebase/firestore";
+import { collection, query, orderBy, limit, onSnapshot, doc, getDoc } from "firebase/firestore";
 
 function useSimpleRanking(collectionName: string, maxEntries = 50) {
   const [entries, setEntries] = useState<RankingEntry[]>([]);
@@ -15,8 +15,8 @@ function useSimpleRanking(collectionName: string, maxEntries = 50) {
   useEffect(() => {
     if (!db) { setLoading(false); return; }
     const q = query(collection(db, collectionName), orderBy("totalPoints", "desc"), limit(maxEntries));
-    const unsub = onSnapshot(q, (snap) => {
-      setEntries(snap.docs.map((d, idx) => {
+    const unsub = onSnapshot(q, async (snap) => {
+      const basicEntries = snap.docs.map((d, idx) => {
         const raw = d.data();
         return {
           uid: d.id, position: idx + 1,
@@ -24,7 +24,21 @@ function useSimpleRanking(collectionName: string, maxEntries = 50) {
           totalPredictions: raw.totalPredictions ?? 0, correctPredictions: raw.correctPredictions ?? 0,
           updatedAt: raw.updatedAt ?? null, name: raw.name, initials: raw.initials, photoURL: raw.photoURL ?? null, city: raw.city,
         } as RankingEntry;
+      });
+      
+      const enriched = await Promise.all(basicEntries.map(async (e) => {
+        if (!e.name) {
+          try {
+            const userDoc = await getDoc(doc(db!, "users", e.uid));
+            if (userDoc.exists()) {
+              const uData = userDoc.data();
+              return { ...e, name: uData.name, initials: uData.initials, photoURL: uData.photoURL, city: uData.city };
+            }
+          } catch(err){}
+        }
+        return e;
       }));
+      setEntries(enriched);
       setLoading(false);
     }, () => setLoading(false));
     return () => unsub();

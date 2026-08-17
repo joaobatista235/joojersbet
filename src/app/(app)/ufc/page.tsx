@@ -153,15 +153,19 @@ function UfcFightCard({ fight }: { fight: UfcFight }) {
         </div>
       )}
 
-      {existing && (isLocked || isFinished) && (
+      {existing && (
         <div style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: 12, display: "flex", alignItems: "center", gap: 8 }}>
           <CheckCircle2 size={14} color="var(--orange-500)" />
           <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
             Palpite: {existing.predFighterId === fight.fighter1Id ? fight.fighter1 : fight.fighter2}
             {existing.predMethod && ` por ${existing.predMethod}`}
           </span>
+          <button onClick={() => setShowAll(true)} style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, color: "var(--orange-500)", background: "var(--orange-glow)", border: "none", padding: "4px 8px", borderRadius: 6, cursor: "pointer" }}>Ver todos</button>
         </div>
       )}
+      <AnimatePresence>
+        {showAll && <UfcAllPredictionsModal match={fight} onClose={() => setShowAll(false)} />}
+      </AnimatePresence>
     </motion.div>
   );
 }

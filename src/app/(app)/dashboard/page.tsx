@@ -1,4 +1,5 @@
 "use client";
+import { X } from "lucide-react";
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -59,9 +60,10 @@ function SkeletonCard() {
           width: "40%",
         }}
       />
-    </div>
+          </div>
   );
 }
+
 
 function EmptyState({ label }: { label: string }) {
   return (
@@ -125,6 +127,7 @@ function SectionHeader({
   linkLabel?: string;
   linkHref?: string;
   badge?: React.ReactNode;
+    onAction?: () => void;
 }) {
   return (
     <div className="flex items-center justify-between" style={{ marginBottom: 20 }}>
@@ -182,6 +185,7 @@ export default function DashboardPage() {
   const { entries: rankingEntries, loading: rankLoading } = useRanking(5);
   const { events: feedEvents, loading: feedLoading } = useFeed(5);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
+  const [showFeedModal, setShowFeedModal] = useState(false);
 
   return (
     <div
@@ -338,7 +342,7 @@ export default function DashboardPage() {
           transition={{ duration: 0.35, delay: 0.3 }}
           className="card"
         >
-          <SectionHeader title="Feed social" linkLabel="ver tudo" />
+          <SectionHeader title="Feed social" linkLabel="ver tudo" onAction={() => setShowFeedModal(true)} />
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             {feedLoading ? (
               <div style={{ padding: "24px", textAlign: "center", fontSize: 13, color: "var(--text-muted)" }}>
@@ -437,6 +441,34 @@ export default function DashboardPage() {
             existingPrediction={byMatch.get(selectedMatch.id) ?? null}
             onClose={() => setSelectedMatch(null)}
           />
+        )}
+      </AnimatePresence>
+
+      {/* Modal de Feed Social */}
+      <AnimatePresence>
+        {showFeedModal && (
+          <div style={{ position: "fixed", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowFeedModal(false)}
+              style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }} />
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+              style={{ position: "relative", width: "100%", maxWidth: 500, maxHeight: "80vh", background: "var(--bg-base)", borderRadius: 16, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+              <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>Feed Social</h3>
+                <button onClick={() => setShowFeedModal(false)} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer" }}><X size={20} /></button>
+              </div>
+              <div style={{ padding: 20, overflowY: "auto", display: "flex", flexDirection: "column", gap: 12 }}>
+                {feedEvents.map((item, i) => {
+                  const diffMs = Date.now() - new Date(item.createdAt).getTime();
+                  const diffMins = Math.floor(diffMs / 60000);
+                  const diffHours = Math.floor(diffMins / 60);
+                  let timeAgo = "agora mesmo";
+                  if (diffMins > 0 && diffMins < 60) timeAgo = `há ${diffMins} min`;
+                  else if (diffHours >= 1) timeAgo = `há ${diffHours}h`;
+                  return <FeedEvent key={item.id} item={{...item, timeAgo}} delay={0} />;
+                })}
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>

@@ -158,7 +158,7 @@ function Cs2MatchCard({ match }: { match: Cs2Match }) {
         </div>
       )}
 
-      {hasPredicted && (isLocked || isFinished) && (
+      {hasPredicted && (
         <div style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: 12, display: "flex", alignItems: "center", gap: 8 }}>
           <CheckCircle2 size={14} color="var(--orange-500)" />
           <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
