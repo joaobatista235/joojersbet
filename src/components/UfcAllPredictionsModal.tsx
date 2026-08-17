@@ -80,15 +80,24 @@ export function UfcAllPredictionsModal({ match, onClose }: { match: UfcFight; on
                   const isMe = p.userId === user?.uid;
                   return (
                     <div key={p.userId} style={{ display: "flex", alignItems: "center", gap: 12, padding: 12, borderRadius: 12, backgroundColor: isMe ? "var(--orange-glow)" : "var(--bg-surface)", border: isMe ? "1px solid var(--orange-500)" : "1px solid var(--border-subtle)" }}>
-                      <div style={{ width: 36, height: 36, borderRadius: "50%", backgroundColor: p.photoURL ? "transparent" : "var(--orange-500)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "white", overflow: "hidden" }}>
+                      <div style={{ width: 36, height: 36, borderRadius: "50%", backgroundColor: p.photoURL ? "transparent" : "var(--orange-500)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "white", overflow: "hidden", flexShrink: 0 }}>
                         {p.photoURL ? <img src={p.photoURL} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : p.initials}
                       </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>
-                          {p.name} {isMe && <span style={{ fontSize: 11, fontWeight: 500, color: "var(--orange-400)", marginLeft: 6 }}>(Você)</span>}
+                      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
+                        <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                          {p.name} {isMe && <span style={{ fontWeight: 600, color: "var(--orange-400)", marginLeft: 4 }}>(Você)</span>}
                         </div>
-                        <div style={{ fontSize: 13, color: "var(--text-primary)", fontWeight: 600 }}>{p.predFighterId === match.fighter1Id ? match.fighter1 : match.fighter2}</div>
-                        <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>{p.predMethod} • {p.predRound}º Round</div>
+                        <div style={{ fontSize: 14, color: "var(--text-primary)", fontWeight: 800 }}>
+                          Vencedor: <span style={{ color: "var(--orange-500)" }}>{p.predFighterId === match.fighter1Id ? match.fighter1 : match.fighter2}</span>
+                        </div>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <span style={{ fontSize: 10, fontWeight: 700, background: "var(--bg-base)", color: "var(--text-primary)", padding: "4px 8px", borderRadius: 12, border: "1px solid var(--border-subtle)" }}>
+                            {p.predMethod}
+                          </span>
+                          <span style={{ fontSize: 10, fontWeight: 700, background: "var(--bg-base)", color: "var(--text-primary)", padding: "4px 8px", borderRadius: 12, border: "1px solid var(--border-subtle)" }}>
+                            {p.predRound}º Round
+                          </span>
+                        </div>
                       </div>
                     </div>
                   );

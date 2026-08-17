@@ -9,6 +9,8 @@ import {
   limit,
   onSnapshot,
   Unsubscribe,
+  getDoc,
+  doc,
 } from "firebase/firestore";
 
 export interface RankingEntry {
@@ -73,7 +75,7 @@ export function useRanking(
     unsubscribe = onSnapshot(
       q,
       (snap) => {
-        const data = snap.docs.map((d, idx) => {
+        const basicEntries = snap.docs.map((d, idx) => {
           const raw = d.data();
           
           let pts = raw.totalPoints ?? 0;
@@ -115,8 +117,22 @@ export function useRanking(
             city: raw.city ?? undefined,
           } as RankingEntry;
         });
-        setEntries(data);
-        setLoading(false);
+
+        Promise.all(basicEntries.map(async (e) => {
+          if (!e.name || !e.photoURL) {
+            try {
+              const userDoc = await getDoc(doc(db!, "users", e.uid));
+              if (userDoc.exists()) {
+                const uData = userDoc.data();
+                return { ...e, name: uData.name, initials: uData.initials, photoURL: uData.photoURL, city: uData.city };
+              }
+            } catch(err){}
+          }
+          return e;
+        })).then(enriched => {
+          setEntries(enriched);
+          setLoading(false);
+        });
       },
       (err) => {
         console.error("[useRanking]", err);
