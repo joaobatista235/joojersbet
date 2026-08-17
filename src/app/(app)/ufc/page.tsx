@@ -34,13 +34,13 @@ function FighterPhoto({ src, name, size = 72 }: { src?: string | null; name: str
   );
 }
 
-function UfcFightCard({ fight }: { fight: UfcFight }) {
-  const { byFight, savePrediction } = useUfcPredictions();
+function UfcFightCard({ fight, byFight, savePrediction, predsLoading }: { fight: UfcFight, byFight: Map<string, any>, savePrediction: any, predsLoading: boolean }) {
   const existing = byFight.get(fight.id);
   const isLocked = existing?.locked ?? false;
   const isFinished = fight.status === "FINISHED";
   const hasPredicted = !!existing;
   const canPredict = !hasPredicted && !isLocked && !isFinished;
+  if (predsLoading) return <div className="card" style={{ padding: 20, height: 200, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)" }}>Carregando...</div>;
 
   const [selectedFighterId, setSelectedFighterId] = useState<number | null>(existing?.predFighterId ?? null);
   const [selectedMethod, setSelectedMethod] = useState<UfcMethod | null>(existing?.predMethod ?? null);
@@ -171,6 +171,7 @@ function UfcFightCard({ fight }: { fight: UfcFight }) {
 }
 
 export default function UfcPage() {
+  const { byFight, savePrediction, loading: predsLoading } = useUfcPredictions();
   const [tab, setTab] = useState<Tab>("upcoming");
   const { fights: upcoming, loading: upLoading } = useUfcFights("UPCOMING", 50);
   const { fights: live, loading: liveLoading } = useUfcFights("LIVE", 20);
@@ -231,7 +232,7 @@ export default function UfcPage() {
       ) : (
         <AnimatePresence mode="wait">
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 16 }}>
-            {fights.map((f) => <UfcFightCard key={f.id} fight={f} />)}
+            {fights.map((f) => <UfcFightCard key={f.id} fight={f} byFight={byFight} savePrediction={savePrediction} predsLoading={predsLoading} />)}
           </div>
         </AnimatePresence>
       )}

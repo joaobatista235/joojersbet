@@ -46,8 +46,7 @@ function MapScoreInput({ value, onChange, max }: { value: number; onChange: (v: 
   );
 }
 
-function Cs2MatchCard({ match }: { match: Cs2Match }) {
-  const { byMatch, savePrediction } = useCs2Predictions();
+function Cs2MatchCard({ match, byMatch, savePrediction, predsLoading }: { match: Cs2Match, byMatch: Map<string, any>, savePrediction: any, predsLoading: boolean }) {
   const existing = byMatch.get(match.id);
   const isLocked = existing?.locked ?? false;
   const isFinished = match.status === "FINISHED";
@@ -63,6 +62,7 @@ function Cs2MatchCard({ match }: { match: Cs2Match }) {
 
   const hasPredicted = !!existing;
   const canPredict = !hasPredicted && !isLocked && !isFinished;
+  if (predsLoading) return <div className="card" style={{ padding: 20, height: 200, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)" }}>Carregando...</div>;
 
   async function handleSave() {
     const selectedTeamId = score1 > score2 ? match.team1Id : score1 < score2 ? match.team2Id : null;
@@ -176,6 +176,7 @@ function Cs2MatchCard({ match }: { match: Cs2Match }) {
 }
 
 export default function Cs2Page() {
+  const { byMatch, savePrediction, loading: predsLoading } = useCs2Predictions();
   const [tab, setTab] = useState<Tab>("upcoming");
   const { matches: upcoming, loading: upLoading } = useCs2Matches("UPCOMING", 50);
   const { matches: live, loading: liveLoading } = useCs2Matches("LIVE", 20);
@@ -239,7 +240,7 @@ export default function Cs2Page() {
       ) : (
         <AnimatePresence mode="wait">
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 16 }}>
-            {matches.map((m) => <Cs2MatchCard key={m.id} match={m} />)}
+            {matches.map((m) => <Cs2MatchCard key={m.id} match={m} byMatch={byMatch} savePrediction={savePrediction} predsLoading={predsLoading} />)}
           </div>
         </AnimatePresence>
       )}

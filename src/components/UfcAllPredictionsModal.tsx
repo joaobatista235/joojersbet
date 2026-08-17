@@ -25,7 +25,7 @@ export function UfcAllPredictionsModal({ match, onClose }: { match: UfcFight; on
     async function load() {
       if (!db) return;
       try {
-        const q = query(collection(db, "predictions"), where("matchId", "==", match.id));
+        const q = query(collection(db, "ufcPredictions"), where("fightId", "==", match.id));
         const snap = await getDocs(q);
         const predsData = snap.docs.map((d) => d.data());
 
