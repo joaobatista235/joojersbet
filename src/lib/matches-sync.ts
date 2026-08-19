@@ -1,11 +1,11 @@
-﻿import { FieldValue } from "firebase-admin/firestore";
+import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "@/lib/firebase-admin";
 import { getLiveMatches, getFixturesByDate, getFixtureById } from "@/lib/api-football/client";
 import type { Match } from "@/lib/api-football/types";
 
-const PROACTIVE_DAYS_AHEAD = 7;
-const PROACTIVE_DAYS_BEHIND = 2;
-const MAX_STALE_LOOKUPS = 20;
+const PROACTIVE_DAYS_AHEAD = 3;
+const PROACTIVE_DAYS_BEHIND = 1;
+const MAX_STALE_LOOKUPS = 5;
 
 function toDateKey(value?: string | null): string | null {
   if (!value) return null;
@@ -21,12 +21,24 @@ export async function syncMatchesFromApi(): Promise<number> {
 
   const now = new Date();
 
-  // Datas a buscar na API: de PROACTIVE_DAYS_BEHIND ate PROACTIVE_DAYS_AHEAD
+  // Datas a buscar na API
   const dateCandidates = new Set<string>();
-  for (let offset = -PROACTIVE_DAYS_BEHIND; offset <= PROACTIVE_DAYS_AHEAD; offset++) {
-    const candidate = new Date(now);
-    candidate.setDate(now.getDate() + offset);
-    dateCandidates.add(candidate.toISOString().slice(0, 10));
+  const currentHour = now.getHours();
+  // Fetch completo a cada 4 horas (0, 4, 8, 12, 16, 20) para economizar API (100 req/dia limit)
+  const isFullSync = currentHour % 4 === 0;
+
+  if (isFullSync) {
+    for (let offset = -PROACTIVE_DAYS_BEHIND; offset <= PROACTIVE_DAYS_AHEAD; offset++) {
+      const candidate = new Date(now);
+      candidate.setDate(now.getDate() + offset);
+      dateCandidates.add(candidate.toISOString().slice(0, 10));
+    }
+  } else {
+    // Sempre busca hoje e ontem (para atualizar placares recentes)
+    dateCandidates.add(now.toISOString().slice(0, 10));
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    dateCandidates.add(yesterday.toISOString().slice(0, 10));
   }
 
   // Buscar matches ativos no Firestore (sem limit pequeno - pegar todos)

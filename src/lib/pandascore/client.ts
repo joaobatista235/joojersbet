@@ -14,6 +14,8 @@ const TIER1_TOURNAMENT_SLUGS = [
   "iem-katowice",
   "pgl",
   "major",
+  "ewc",
+  "esports-world-cup"
 ];
 
 async function pandaFetch<T>(path: string, params: Record<string, string> = {}): Promise<T> {
