@@ -299,17 +299,24 @@ export default function PerfilPage() {
             ) : (
               <div style={{ display: "flex", flexDirection: "column" }}>
                 {filtered.map((m, i) => {
-                  const time = new Date(m.startTime).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+                  const date = new Date(m.startTime);
+                  const time = `${date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} às ${date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
                   return (
                     <UpcomingMatchRow
                       key={m.id}
+                      isProfile={true}
                       match={{
                         id: m.id,
                         homeTeam: m.homeTeam,
                         awayTeam: m.awayTeam,
+                        homeLogo: m.homeLogo,
+                        awayLogo: m.awayLogo,
                         time,
                         competition: m.competition,
                         group: m.round,
+                        status: m.status,
+                        homeScore: m.homeScore,
+                        awayScore: m.awayScore,
                         prediction: byMatch.get(m.id) ?? null,
                         onPredict: () => setSelectedMatch(m),
                         onViewAllPredictions: () => setSelectedMatchForAll(m),
@@ -338,8 +345,30 @@ export default function PerfilPage() {
                   return (
                     <div key={m.id} onClick={() => setSelectedCs2MatchForAll(m)} style={{ padding: "14px 0", borderBottom: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 2 }}>{m.team1} <span style={{ color: "var(--text-muted)", fontWeight: 500 }}>vs</span> {m.team2}</div>
-                        <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{m.tournament} • {m.status === "LIVE" ? "🔴 Ao Vivo" : new Date(m.startTime).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 2 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                            {m.team1Logo && <img src={m.team1Logo} alt={m.team1} style={{ width: 16, height: 16, objectFit: "contain" }} />}
+                            {m.team1}
+                          </div>
+                          <span style={{ color: "var(--text-muted)", fontWeight: 500 }}>vs</span>
+                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                            {m.team2Logo && <img src={m.team2Logo} alt={m.team2} style={{ width: 16, height: 16, objectFit: "contain" }} />}
+                            {m.team2}
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "var(--text-muted)" }}>
+                          <span>{m.tournament} • {m.status === "LIVE" ? "🔴 Ao Vivo" : new Date(m.startTime).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) + " às " + new Date(m.startTime).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
+                          {m.status === "FINISHED" && m.team1Score !== null && m.team2Score !== null && (
+                            <span style={{ fontWeight: 700, color: "var(--text-primary)", background: "var(--bg-elevated)", padding: "2px 6px", borderRadius: 4 }}>
+                              Resultado: {m.team1Score} × {m.team2Score}
+                            </span>
+                          )}
+                          {m.status === "FINISHED" && pred?.pointsEarned !== undefined && pred.pointsEarned > 0 && (
+                            <span style={{ fontWeight: 700, color: "#22c55e", background: "rgba(34,197,94,0.1)", padding: "2px 6px", borderRadius: 4 }}>
+                              +{pred.pointsEarned} pts
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2, flexShrink: 0 }}>
                         <div style={{ fontSize: 15, fontWeight: 800, color: "var(--orange-400)", letterSpacing: 1 }}>
@@ -370,11 +399,36 @@ export default function PerfilPage() {
                 {filtered.map((f) => {
                   const pred = byFight.get(f.id);
                   const pickedFighter = pred?.predFighterId === f.fighter1Id ? f.fighter1 : f.fighter2;
+                  const date = new Date(f.startTime);
+                  const formattedDate = `${date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} às ${date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+                  const realWinner = f.winnerId === f.fighter1Id ? f.fighter1 : f.winnerId === f.fighter2Id ? f.fighter2 : null;
                   return (
                     <div key={f.id} onClick={() => setSelectedUfcFightForAll(f)} style={{ padding: "14px 0", borderBottom: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 2 }}>{f.fighter1} <span style={{ color: "var(--text-muted)", fontWeight: 500 }}>vs</span> {f.fighter2}</div>
-                        <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{f.weightClass} • {f.status === "LIVE" ? "🔴 Ao Vivo" : new Date(f.startTime).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 2 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                            {f.fighter1Photo && <img src={f.fighter1Photo} alt={f.fighter1} style={{ width: 20, height: 20, borderRadius: "50%", objectFit: "cover" }} />}
+                            {f.fighter1}
+                          </div>
+                          <span style={{ color: "var(--text-muted)", fontWeight: 500 }}>vs</span>
+                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                            {f.fighter2Photo && <img src={f.fighter2Photo} alt={f.fighter2} style={{ width: 20, height: 20, borderRadius: "50%", objectFit: "cover" }} />}
+                            {f.fighter2}
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6, fontSize: 11, color: "var(--text-muted)" }}>
+                          <span>{f.weightClass} • {f.status === "LIVE" ? "🔴 Ao Vivo" : formattedDate}</span>
+                          {f.status === "FINISHED" && realWinner && (
+                            <span style={{ fontWeight: 700, color: "var(--text-primary)", background: "var(--bg-elevated)", padding: "2px 6px", borderRadius: 4 }}>
+                              Vencedor: {realWinner} {f.method && `(${f.method})`}
+                            </span>
+                          )}
+                          {f.status === "FINISHED" && pred?.pointsEarned !== undefined && pred.pointsEarned > 0 && (
+                            <span style={{ fontWeight: 700, color: "#22c55e", background: "rgba(34,197,94,0.1)", padding: "2px 6px", borderRadius: 4 }}>
+                              +{pred.pointsEarned} pts
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2, flexShrink: 0 }}>
                         <div style={{ fontSize: 13, fontWeight: 800, color: "var(--orange-400)" }}>{pickedFighter}</div>

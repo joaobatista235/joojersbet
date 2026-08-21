@@ -1,4 +1,4 @@
-﻿import type { NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
 import { syncMatchesFromApi } from "@/lib/matches-sync";
 import { syncUfcFights } from "@/lib/ufc-sync";
@@ -224,7 +224,7 @@ async function handleProcess() {
           }
         }
 
-        batch.update(adminDb.collection("ufcPredictions").doc(pred.id), { locked: true });
+        batch.update(adminDb.collection("ufcPredictions").doc(pred.id), { locked: true, pointsEarned: scoring.pointsEarned });
         ufcAffectedUsers.add(pred.userId);
       }
 
@@ -337,7 +337,7 @@ async function handleProcess() {
           }
         }
 
-        batch.update(adminDb.collection("cs2Predictions").doc(pred.id), { locked: true });
+        batch.update(adminDb.collection("cs2Predictions").doc(pred.id), { locked: true, pointsEarned: scoring.pointsEarned });
         cs2AffectedUsers.add(pred.userId);
       }
 

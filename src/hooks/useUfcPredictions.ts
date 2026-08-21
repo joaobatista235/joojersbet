@@ -13,6 +13,7 @@ export interface UfcPrediction {
   predMethod: UfcMethod | null;
   locked: boolean;
   createdAt: string;
+  pointsEarned?: number;
 }
 
 export function useUfcPredictions() {

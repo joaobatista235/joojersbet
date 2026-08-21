@@ -20,6 +20,7 @@ export interface Prediction {
   createdAt: string;
   updatedAt: string;
   locked: boolean; // true quando o jogo já começou e não pode mais editar
+  pointsEarned?: number;
 }
 
 export type PredictionInput = {
@@ -89,6 +90,7 @@ export async function fetchUserPredictions(userId: string): Promise<Prediction[]
       homeGoals: data.homeGoals,
       awayGoals: data.awayGoals,
       locked: data.locked ?? false,
+      pointsEarned: data.pointsEarned,
       createdAt: tsToISO(data.createdAt),
       updatedAt: tsToISO(data.updatedAt),
     };

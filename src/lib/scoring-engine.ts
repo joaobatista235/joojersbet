@@ -97,7 +97,7 @@ export async function processMatchScoring(
       }
     }
 
-    batch.update(db.collection("predictions").doc(pred.id), { locked: true });
+    batch.update(db.collection("predictions").doc(pred.id), { locked: true, pointsEarned: scoring.pointsEarned });
     affectedUserIds.push(pred.userId);
   }
 

@@ -17,6 +17,7 @@ export interface Cs2Prediction {
   predTeam2Score: number;
   locked: boolean;
   createdAt: string;
+  pointsEarned?: number;
 }
 
 export function useCs2Predictions() {

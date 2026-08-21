@@ -55,6 +55,7 @@ export function usePredictions(): UsePredictionsResult {
             homeGoals: raw.homeGoals,
             awayGoals: raw.awayGoals,
             locked: raw.locked ?? false,
+            pointsEarned: raw.pointsEarned,
             createdAt: tsToISO(raw.createdAt),
             updatedAt: tsToISO(raw.updatedAt),
           } as Prediction;
