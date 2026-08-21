@@ -79,7 +79,10 @@ export function useMatches(
           }
 
           if (status === "FINISHED") {
-            data.sort((a, b) => b.startTime.localeCompare(a.startTime));
+            data.sort((a, b) => {
+              const getMs = (v: any) => v?.toMillis ? v.toMillis() : new Date(v || 0).getTime();
+              return getMs(b.startTime) - getMs(a.startTime);
+            });
             data = data.slice(0, maxResults);
           }
 

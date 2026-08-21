@@ -28,7 +28,10 @@ export function useCustomEvents(statusFilter?: "open" | "resolved" | "closed") {
 
     unsubscribe = onSnapshot(q, (snap) => {
       const data = snap.docs.map((d) => ({ id: d.id, ...d.data() } as CustomEvent));
-      data.sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
+      data.sort((a, b) => {
+        const getMs = (v: any) => v?.toMillis ? v.toMillis() : new Date(v || 0).getTime();
+        return getMs(b.createdAt) - getMs(a.createdAt);
+      });
       setEvents(data);
       setLoading(false);
     }, () => setLoading(false));

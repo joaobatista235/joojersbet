@@ -110,6 +110,6 @@ export async function getPastCs2Matches(): Promise<Cs2Match[]> {
 }
 
 export async function getCs2MatchById(id: string): Promise<Cs2Match | null> {
-  const data = await pandaFetch<PandaScoreMatch>(`/csgo/matches/${id}`);
-  return normalizeMatch(data);
+  const data = await pandaFetch<PandaScoreMatch[]>(`/csgo/matches`, { "filter[id]": id });
+  return data.length > 0 ? normalizeMatch(data[0]) : null;
 }

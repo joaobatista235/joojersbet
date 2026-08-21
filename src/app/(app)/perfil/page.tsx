@@ -13,7 +13,11 @@ import { useUfcPredictions } from "@/hooks/useUfcPredictions";
 import { UpcomingMatchRow } from "@/components/UpcomingMatchRow";
 import { PredictionModal } from "@/components/PredictionModal";
 import { AllPredictionsModal } from "@/components/AllPredictionsModal";
+import { Cs2AllPredictionsModal } from "@/components/Cs2AllPredictionsModal";
+import { UfcAllPredictionsModal } from "@/components/UfcAllPredictionsModal";
 import type { Match } from "@/lib/api-football/types";
+import type { Cs2Match } from "@/lib/pandascore/types";
+import type { UfcFight } from "@/lib/api-mma/types";
 import { useState, useMemo } from "react";
 import { AnimatePresence } from "framer-motion";
 
@@ -23,33 +27,38 @@ export default function PerfilPage() {
 
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [selectedMatchForAll, setSelectedMatchForAll] = useState<Match | null>(null);
+  const [selectedCs2MatchForAll, setSelectedCs2MatchForAll] = useState<Cs2Match | null>(null);
+  const [selectedUfcFightForAll, setSelectedUfcFightForAll] = useState<UfcFight | null>(null);
 
   const [category, setCategory] = useState<string>("futebol");
   const [leagueId, setLeagueId] = useState<string>("geral");
 
   const { matches: upcoming } = useMatches("UPCOMING", 100);
   const { matches: live } = useMatches("LIVE", 50);
+  const { matches: finished } = useMatches("FINISHED", 100);
   const { byMatch } = usePredictions();
 
   const { matches: cs2Upcoming } = useCs2Matches("UPCOMING", 50);
   const { matches: cs2Live } = useCs2Matches("LIVE", 20);
+  const { matches: cs2Finished } = useCs2Matches("FINISHED", 50);
   const { byMatch: byCs2Match } = useCs2Predictions();
 
   const { fights: ufcUpcoming } = useUfcFights("UPCOMING", 50);
   const { fights: ufcLive } = useUfcFights("LIVE", 20);
+  const { fights: ufcFinished } = useUfcFights("FINISHED", 50);
   const { byFight } = useUfcPredictions();
 
   const myMatches = useMemo(() => {
-    return [...live, ...upcoming].filter((m) => byMatch.has(m.id));
-  }, [live, upcoming, byMatch]);
+    return [...live, ...upcoming, ...finished].filter((m) => byMatch.has(m.id));
+  }, [live, upcoming, finished, byMatch]);
 
   const myCs2Matches = useMemo(() => {
-    return [...cs2Live, ...cs2Upcoming].filter((m) => byCs2Match.has(m.id));
-  }, [cs2Live, cs2Upcoming, byCs2Match]);
+    return [...cs2Live, ...cs2Upcoming, ...cs2Finished].filter((m) => byCs2Match.has(m.id));
+  }, [cs2Live, cs2Upcoming, cs2Finished, byCs2Match]);
 
   const myUfcFights = useMemo(() => {
-    return [...ufcLive, ...ufcUpcoming].filter((f) => byFight.has(f.id));
-  }, [ufcLive, ufcUpcoming, byFight]);
+    return [...ufcLive, ...ufcUpcoming, ...ufcFinished].filter((f) => byFight.has(f.id));
+  }, [ufcLive, ufcUpcoming, ufcFinished, byFight]);
 
   if (!user) return null;
 
@@ -327,7 +336,7 @@ export default function PerfilPage() {
                 {filtered.map((m) => {
                   const pred = byCs2Match.get(m.id);
                   return (
-                    <div key={m.id} style={{ padding: "14px 0", borderBottom: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div key={m.id} onClick={() => setSelectedCs2MatchForAll(m)} style={{ padding: "14px 0", borderBottom: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 2 }}>{m.team1} <span style={{ color: "var(--text-muted)", fontWeight: 500 }}>vs</span> {m.team2}</div>
                         <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{m.tournament} • {m.status === "LIVE" ? "🔴 Ao Vivo" : new Date(m.startTime).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</div>
@@ -362,7 +371,7 @@ export default function PerfilPage() {
                   const pred = byFight.get(f.id);
                   const pickedFighter = pred?.predFighterId === f.fighter1Id ? f.fighter1 : f.fighter2;
                   return (
-                    <div key={f.id} style={{ padding: "14px 0", borderBottom: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div key={f.id} onClick={() => setSelectedUfcFightForAll(f)} style={{ padding: "14px 0", borderBottom: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 2 }}>{f.fighter1} <span style={{ color: "var(--text-muted)", fontWeight: 500 }}>vs</span> {f.fighter2}</div>
                         <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{f.weightClass} • {f.status === "LIVE" ? "🔴 Ao Vivo" : new Date(f.startTime).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</div>
@@ -399,6 +408,26 @@ export default function PerfilPage() {
             key={`all-${selectedMatchForAll.id}`}
             match={selectedMatchForAll}
             onClose={() => setSelectedMatchForAll(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {selectedCs2MatchForAll && (
+          <Cs2AllPredictionsModal
+            key={`all-cs2-${selectedCs2MatchForAll.id}`}
+            match={selectedCs2MatchForAll}
+            onClose={() => setSelectedCs2MatchForAll(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {selectedUfcFightForAll && (
+          <UfcAllPredictionsModal
+            key={`all-ufc-${selectedUfcFightForAll.id}`}
+            match={selectedUfcFightForAll}
+            onClose={() => setSelectedUfcFightForAll(null)}
           />
         )}
       </AnimatePresence>

@@ -155,6 +155,7 @@ function SectionHeader({
         </Link>
       ) : linkLabel ? (
         <button
+          onClick={onAction}
           style={{
             fontSize: 12,
             fontWeight: 500,
