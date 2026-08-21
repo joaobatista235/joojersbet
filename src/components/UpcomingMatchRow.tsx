@@ -66,12 +66,12 @@ export function UpcomingMatchRow({
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            {match.homeLogo && <img src={match.homeLogo} alt={match.homeTeam} style={{ width: 16, height: 16, objectFit: "contain" }} />}
+            {match.homeLogo && <img src={`/api/image-proxy?url=${encodeURIComponent(match.homeLogo)}`} alt={match.homeTeam} style={{ width: 16, height: 16, objectFit: "contain" }} />}
             {match.homeTeam}
           </div>
           <span style={{ color: "var(--text-muted)", fontSize: 12 }}>×</span>
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            {match.awayLogo && <img src={match.awayLogo} alt={match.awayTeam} style={{ width: 16, height: 16, objectFit: "contain" }} />}
+            {match.awayLogo && <img src={`/api/image-proxy?url=${encodeURIComponent(match.awayLogo)}`} alt={match.awayTeam} style={{ width: 16, height: 16, objectFit: "contain" }} />}
             {match.awayTeam}
           </div>
         </div>
