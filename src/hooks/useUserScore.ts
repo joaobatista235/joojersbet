@@ -33,12 +33,13 @@ interface UseUserScoreResult {
 }
 
 /**
- * Ouve `userScores/{uid}` em tempo real.
- * Retorna zeros enquanto o documento não existe.
+ * Ouve `userScores/{uid}`, `cs2UserScores/{uid}` e `ufcUserScores/{uid}` em tempo real.
  */
 export function useUserScore(): UseUserScoreResult {
   const { user } = useAuth();
   const [score, setScore] = useState<UserScore>(DEFAULT_SCORE);
+  const [cs2Score, setCs2Score] = useState<any>(null);
+  const [ufcScore, setUfcScore] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,9 +51,12 @@ export function useUserScore(): UseUserScoreResult {
 
     setLoading(true);
 
-    const ref = doc(db, "userScores", user.uid);
-    const unsubscribe = onSnapshot(
-      ref,
+    const refFb = doc(db, "userScores", user.uid);
+    const refCs2 = doc(db, "cs2UserScores", user.uid);
+    const refUfc = doc(db, "ufcUserScores", user.uid);
+
+    const unsubFb = onSnapshot(
+      refFb,
       (snap) => {
         if (snap.exists()) {
           setScore({ ...DEFAULT_SCORE, ...(snap.data() as Partial<UserScore>) });
@@ -62,14 +66,33 @@ export function useUserScore(): UseUserScoreResult {
         setLoading(false);
       },
       (err) => {
-        console.error("[useUserScore]", err);
+        console.error("[useUserScore] FB", err);
         setError(err.message);
         setLoading(false);
       }
     );
 
-    return () => unsubscribe();
+    const unsubCs2 = onSnapshot(refCs2, (snap) => {
+      if (snap.exists()) setCs2Score(snap.data());
+    });
+
+    const unsubUfc = onSnapshot(refUfc, (snap) => {
+      if (snap.exists()) setUfcScore(snap.data());
+    });
+
+    return () => {
+      unsubFb();
+      unsubCs2();
+      unsubUfc();
+    };
   }, [user]);
 
-  return { score, loading, error };
+  // Merge the scores into the structure expected by the profile page
+  const mergedScore = {
+    ...score,
+    cs2: cs2Score ? { geral: cs2Score } : undefined,
+    ufc: ufcScore ? { geral: ufcScore } : undefined,
+  };
+
+  return { score: mergedScore, loading, error };
 }
