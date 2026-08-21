@@ -122,6 +122,7 @@ function SectionHeader({
   linkLabel,
   linkHref,
   badge,
+  onAction,
 }: {
   title: string;
   linkLabel?: string;
