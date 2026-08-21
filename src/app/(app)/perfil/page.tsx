@@ -301,28 +301,44 @@ export default function PerfilPage() {
                 {filtered.map((m, i) => {
                   const date = new Date(m.startTime);
                   const time = `${date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} às ${date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+                  const pred = byMatch.get(m.id) ?? null;
                   return (
-                    <UpcomingMatchRow
-                      key={m.id}
-                      isProfile={true}
-                      match={{
-                        id: m.id,
-                        homeTeam: m.homeTeam,
-                        awayTeam: m.awayTeam,
-                        homeLogo: m.homeLogo,
-                        awayLogo: m.awayLogo,
-                        time,
-                        competition: m.competition,
-                        group: m.round,
-                        status: m.status,
-                        homeScore: m.homeScore,
-                        awayScore: m.awayScore,
-                        prediction: byMatch.get(m.id) ?? null,
-                        onPredict: () => setSelectedMatch(m),
-                        onViewAllPredictions: () => setSelectedMatchForAll(m),
-                      }}
-                      delay={0.1 * i}
-                    />
+                    <div key={m.id} onClick={() => setSelectedMatchForAll(m)} style={{ padding: "14px 0", borderBottom: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 2 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                            {m.homeLogo && <img src={`/api/image-proxy?url=${encodeURIComponent(m.homeLogo)}`} alt={m.homeTeam} style={{ width: 16, height: 16, objectFit: "contain" }} />}
+                            {m.homeTeam}
+                          </div>
+                          <span style={{ color: "var(--text-muted)", fontWeight: 500 }}>vs</span>
+                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                            {m.awayLogo && <img src={`/api/image-proxy?url=${encodeURIComponent(m.awayLogo)}`} alt={m.awayTeam} style={{ width: 16, height: 16, objectFit: "contain" }} />}
+                            {m.awayTeam}
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6, fontSize: 11, color: "var(--text-muted)" }}>
+                          <span>{m.competition} • {m.status === "LIVE" ? "🔴 Ao Vivo" : time}</span>
+                          {m.status === "FINISHED" && m.homeScore !== null && m.awayScore !== null && (
+                            <span style={{ fontWeight: 700, color: "var(--text-primary)", background: "var(--bg-elevated)", padding: "2px 6px", borderRadius: 4 }}>
+                              Resultado: {m.homeScore} × {m.awayScore}
+                            </span>
+                          )}
+                          {m.status === "FINISHED" && pred?.pointsEarned !== undefined && pred.pointsEarned > 0 && (
+                            <span style={{ fontWeight: 700, color: "#22c55e", background: "rgba(34,197,94,0.1)", padding: "2px 6px", borderRadius: 4 }}>
+                              +{pred.pointsEarned} pts
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2, flexShrink: 0 }}>
+                        <div style={{ fontSize: 15, fontWeight: 800, color: "var(--orange-400)", letterSpacing: 1 }}>
+                          {pred?.homeGoals ?? "-"} <span style={{ color: "var(--text-muted)", fontSize: 12 }}>-</span> {pred?.awayGoals ?? "-"}
+                        </div>
+                        <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>
+                          {pred && pred.homeGoals > pred.awayGoals ? m.homeTeam : pred && pred.awayGoals > pred.homeGoals ? m.awayTeam : (pred && pred.homeGoals === pred.awayGoals ? "Empate" : "")}
+                        </div>
+                      </div>
+                    </div>
                   );
                 })}
               </div>
