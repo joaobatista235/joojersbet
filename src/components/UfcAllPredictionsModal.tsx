@@ -90,14 +90,13 @@ export function UfcAllPredictionsModal({ match, onClose }: { match: UfcFight; on
                         <div style={{ fontSize: 14, color: "var(--text-primary)", fontWeight: 800 }}>
                           Vencedor: <span style={{ color: "var(--orange-500)" }}>{p.predFighterId === match.fighter1Id ? match.fighter1 : match.fighter2}</span>
                         </div>
-                        <div style={{ display: "flex", gap: 6 }}>
-                          <span style={{ fontSize: 10, fontWeight: 700, background: "var(--bg-base)", color: "var(--text-primary)", padding: "4px 8px", borderRadius: 12, border: "1px solid var(--border-subtle)" }}>
-                            {p.predMethod}
-                          </span>
-                          <span style={{ fontSize: 10, fontWeight: 700, background: "var(--bg-base)", color: "var(--text-primary)", padding: "4px 8px", borderRadius: 12, border: "1px solid var(--border-subtle)" }}>
-                            {p.predRound}º Round
-                          </span>
-                        </div>
+                        {p.predMethod && (
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <span style={{ fontSize: 10, fontWeight: 700, background: "var(--bg-base)", color: "var(--text-primary)", padding: "4px 8px", borderRadius: 12, border: "1px solid var(--border-subtle)" }}>
+                              {p.predMethod}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
